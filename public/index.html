@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buy Leads Dashboard</title>
+<style>
+  :root{--bg:#EDF0F3;--card:#fff;--ink:#16202E;--muted:#5B6776;--line:#D8DEE5;--accent:#4F5BD5;--bad:#C9453F;--good:#2E9E6B;--warn:#C2610C}
+  @media (prefers-color-scheme:dark){:root{--bg:#0E1520;--card:#171F2C;--ink:#E7ECF2;--muted:#9AA7B6;--line:#2A3646;--accent:#8F98F2}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;padding:32px 16px}
+  main{max-width:720px;margin:0 auto}
+  h1{font-size:24px;margin:0 0 4px}
+  p.sub{color:var(--muted);margin:0 0 20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px}
+  #drop{border:2px dashed var(--line);border-radius:12px;padding:40px 16px;text-align:center;cursor:pointer;transition:.15s}
+  #drop.over{border-color:var(--accent);background:rgba(79,91,213,.08)}
+  #drop b{display:block;font-size:17px;margin-bottom:4px}
+  #drop span{color:var(--muted)}
+  details{margin-top:16px}
+  summary{cursor:pointer;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  label{display:block;font-size:13px;color:var(--muted)}
+  input,select{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+  button,a.btn{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;margin:4px 8px 4px 0}
+  a.btn.alt{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+  button:disabled{opacity:.5;cursor:default}
+  #status{margin-top:12px;color:var(--muted)}
+  .err{color:var(--bad);font-weight:600}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0}
+  .kpi{border:1px solid var(--line);border-radius:10px;padding:10px}
+  .kpi b{display:block;font-size:22px}
+  .kpi span{color:var(--muted);font-size:12px}
+  ul{margin:8px 0 0;padding-left:20px}
+  li.warn{color:var(--warn)}
+  code{background:var(--bg);padding:2px 6px;border-radius:6px;font-size:13px;word-break:break-all}
+  .hidden{display:none}
+  nav{display:flex;gap:8px;margin-bottom:20px}
+  nav a{padding:8px 14px;border-radius:8px;border:1px solid var(--line);color:var(--ink);text-decoration:none;background:var(--card)}
+  nav a.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+  <nav><a class="on" href="/">Buy Leads Dashboard</a><a href="/notes">Lead Notes Report</a></nav>
+  <h1>Buy Leads Dashboard</h1>
+  <p class="sub">Upload the Pixi Buy Leads Excel export. You get the dashboard and the Excel reports.</p>
+
+  <div class="card">
+    <div id="drop" tabindex="0"><b>Drop the Excel file here</b><span>or click to choose a .xlsx file</span></div>
+    <input id="file" type="file" accept=".xlsx" class="hidden">
+    <div id="picked" class="sub" style="margin-top:10px"></div>
+    <details>
+      <summary>Advanced (optional)</summary>
+      <div class="grid">
+        <div><label>Start (Dubai time)</label><input id="start" type="datetime-local"></div>
+        <div><label>End (Dubai time)</label><input id="end" type="datetime-local"></div>
+        <div><label>Source</label><select id="source"><option value="">All sources</option><option>Meta Ads</option></select></div>
+        <div><label>Extra lead IDs to exclude (comma separated)</label><input id="exclude" placeholder="1539972, 1540001"></div>
+      </div>
+      <p class="sub" style="margin-top:8px">Leave empty to use the first and last day found in the file.</p>
+    </details>
+    <p><button id="go" disabled>Generate reports</button></p>
+    <div id="status"></div>
+  </div>
+
+  <div id="result" class="card hidden"></div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let file = null;
+function pick(f){ file=f; $('picked').textContent=f?('Selected: '+f.name):''; $('go').disabled=!f; }
+$('drop').onclick=()=>$('file').click();
+$('drop').onkeydown=(e)=>{ if(e.key==='Enter'||e.key===' ') $('file').click(); };
+$('file').onchange=(e)=>pick(e.target.files[0]);
+['dragover','dragenter'].forEach(ev=>$('drop').addEventListener(ev,(e)=>{e.preventDefault();$('drop').classList.add('over')}));
+['dragleave','drop'].forEach(ev=>$('drop').addEventListener(ev,(e)=>{e.preventDefault();$('drop').classList.remove('over')}));
+$('drop').addEventListener('drop',(e)=>{ if(e.dataTransfer.files[0]) pick(e.dataTransfer.files[0]); });
+
+// datetime-local gives 2026-10-14T09:40 -> DD-MM-YYYY HH:MM
+const fmt = (v)=>{ if(!v) return ''; const [d,t]=v.split('T'); const [y,m,dd]=d.split('-'); return dd+'-'+m+'-'+y+' '+(t||'00:00'); };
+
+$('go').onclick = async () => {
+  if(!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('start', fmt($('start').value)); fd.append('end', fmt($('end').value));
+  fd.append('source', $('source').value); fd.append('excludeIds', $('exclude').value);
+  $('go').disabled = true; $('result').classList.add('hidden');
+  $('status').className=''; $('status').textContent='Working... this can take a few seconds for large files.';
+  try {
+    const r = await fetch('/api/generate', {method:'POST', body:fd});
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error||'Something went wrong');
+    show(j); $('status').textContent='';
+  } catch(e) { $('status').className='err'; $('status').textContent=e.message; }
+  $('go').disabled = false;
+};
+
+function show(j){
+  const q=j.qc, f=j.files;
+  const k=(v,l)=>'<div class="kpi"><b>'+esc(v)+'</b><span>'+esc(l)+'</span></div>';
+  let h='<h2 style="margin:0 0 4px">Reports ready</h2><div class="sub">'+esc(j.period[0])+' to '+esc(j.period[1])+' (Dubai time), '+esc(j.source)+'</div>';
+  h+='<div class="kpis">'+k(q.leads_in_report,'Leads in report')+k(q.by_status.active,'Active leads')+k(q.by_status.pool,'Lead pool')
+    +k(q.meta_ads.leads,'Meta Ads')+k(q.meta_ads.reassigned,'Reassigned by round robin')+'</div>';
+  h+='<p><a class="btn" target="_blank" href="'+esc(f.dashboard.url)+'">Open dashboard</a>'
+    +'<a class="btn alt" href="'+esc(f.excel.url)+'" download>Download Excel report</a>'
+    +(f.excel_pool?'<a class="btn alt" href="'+esc(f.excel_pool.url)+'" download>Download lead pool Excel</a>':'')+'</p>';
+  const notes=[];
+  notes.push(q.leads_outside_period_excluded+' leads outside the period left out');
+  if(q.test_leads_excluded) notes.push(q.test_leads_excluded+' test leads excluded');
+  (q.warnings||[]).forEach(w=>notes.push('<warn>'+w));
+  h+='<ul>'+notes.map(n=>n.startsWith('<warn>')?'<li class="warn">'+esc(n.slice(6))+'</li>':'<li>'+esc(n)+'</li>').join('')+'</ul>';
+  if(Object.keys(q.unmapped_agents||{}).length) h+='<p class="sub">To fix unmapped agents, add them to <code>teams.json</code> and run again.</p>';
+  h+='<p class="sub">Files saved in <code>'+esc(j.outDir)+'</code></p>';
+  $('result').innerHTML=h; $('result').classList.remove('hidden');
+}
+</script>
+</body>
+</html>

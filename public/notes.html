@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lead Notes Report</title>
+<style>
+  :root{--bg:#EDF0F3;--card:#fff;--ink:#16202E;--muted:#5B6776;--line:#D8DEE5;--accent:#4F5BD5;--bad:#C9453F;--warn:#C2610C}
+  @media (prefers-color-scheme:dark){:root{--bg:#0E1520;--card:#171F2C;--ink:#E7ECF2;--muted:#9AA7B6;--line:#2A3646;--accent:#8F98F2}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;padding:32px 16px}
+  main{max-width:720px;margin:0 auto}
+  h1{font-size:24px;margin:0 0 4px}
+  p.sub{color:var(--muted);margin:0 0 16px}
+  nav{display:flex;gap:8px;margin-bottom:20px}
+  nav a{padding:8px 14px;border-radius:8px;border:1px solid var(--line);color:var(--ink);text-decoration:none;background:var(--card)}
+  nav a.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px}
+  .drops{display:grid;grid-template-columns:1fr;gap:12px}
+  @media(max-width:560px){.drops{grid-template-columns:1fr}}
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:28px 12px;text-align:center;cursor:pointer}
+  .drop.over{border-color:var(--accent);background:rgba(79,91,213,.08)}
+  .drop b{display:block;margin-bottom:2px}.drop span{color:var(--muted);font-size:13px}
+  .drop.done{border-style:solid;border-color:var(--accent)}
+  label{display:block;font-size:13px;color:var(--muted);margin-top:12px}
+  input[type=text]{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+  button,a.btn{display:inline-block;background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;margin:4px 8px 4px 0}
+  button:disabled{opacity:.5;cursor:default}
+  #status{margin-top:10px;color:var(--muted)} .err{color:var(--bad);font-weight:600}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:12px 0}
+  .kpi{border:1px solid var(--line);border-radius:10px;padding:10px}.kpi b{display:block;font-size:22px}.kpi span{color:var(--muted);font-size:12px}
+  li.warn{color:var(--warn)} code{background:var(--bg);padding:2px 6px;border-radius:6px;font-size:13px;word-break:break-all}
+  .hidden{display:none} .authrow{display:flex;gap:10px;align-items:center;margin-top:8px}.authrow code{min-width:70px}
+</style>
+</head>
+<body>
+<main>
+  <nav><a href="/">Buy Leads Dashboard</a><a class="on" href="/notes">Lead Notes Report</a></nav>
+  <h1>Lead Notes Report</h1>
+  <p class="sub">Upload the Pixi leads Excel (Buy or Portal). Notes are fetched from Pixi using each lead ID. Buy and Portal go in separate reports.</p>
+  <div class="card">
+    <div class="drops">
+      <div class="drop" id="dropL" tabindex="0"><b>Leads Excel</b><span id="nameL">drop or click to choose .xlsx</span></div>
+    </div>
+    <input id="fileL" type="file" accept=".xlsx" class="hidden">
+    <label>Report title (optional)</label><input id="title" type="text" placeholder="Buy leads notes">
+    <p><button id="go" disabled>Generate report</button></p>
+    <div id="status"></div>
+  </div>
+  <div id="result" class="card hidden"></div>
+</main>
+<script>
+const $=(id)=>document.getElementById(id);
+const esc=(s)=>String(s).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let leadsFile=null;
+function setFile(f){leadsFile=f;$('nameL').textContent=f?f.name:'drop or click to choose .xlsx';$('dropL').classList.toggle('done',!!f);$('go').disabled=!f;}
+$('dropL').onclick=()=>$('fileL').click();
+$('dropL').onkeydown=(e)=>{if(e.key==='Enter'||e.key===' ')$('fileL').click()};
+$('fileL').onchange=(e)=>setFile(e.target.files[0]);
+['dragover','dragenter'].forEach(ev=>$('dropL').addEventListener(ev,(e)=>{e.preventDefault();$('dropL').classList.add('over')}));
+['dragleave','drop'].forEach(ev=>$('dropL').addEventListener(ev,(e)=>{e.preventDefault();$('dropL').classList.remove('over')}));
+$('dropL').addEventListener('drop',(e)=>{if(e.dataTransfer.files[0])setFile(e.dataTransfer.files[0])});
+async function run(authors){
+  const fd=new FormData();fd.append('leads',leadsFile);fd.append('title',$('title').value);
+  if(authors)fd.append('authors',JSON.stringify(authors));
+  $('go').disabled=true;$('result').classList.add('hidden');$('status').className='';$('status').textContent='Working...';
+  try{const r=await fetch('/api/notes',{method:'POST',body:fd});const j=await r.json();if(!r.ok)throw new Error(j.error||'Something went wrong');show(j);$('status').textContent='';}
+  catch(e){$('status').className='err';$('status').textContent=e.message;}
+  $('go').disabled=false;
+}
+$('go').onclick=()=>run();
+function show(j){
+  const q=j.qc,k=(v,l)=>'<div class="kpi"><b>'+esc(v)+'</b><span>'+esc(l)+'</span></div>';
+  let h='<h2 style="margin:0 0 4px">Report ready</h2><div class="sub">'+esc(j.kind)+' leads. Notes through '+esc(q.notes_through||'n/a')+'</div>';
+  h+='<div class="kpis">'+k(q.leads,'Leads')+k(q.with_notes,'With notes')+k(q.without_notes,'Without notes')+k(q.total_notes,'Total notes')+'</div>';
+  h+='<p><a class="btn" href="'+esc(j.file.url)+'" download>Download Excel report</a></p>';
+  if(q.warnings&&q.warnings.length)h+='<ul>'+q.warnings.map(w=>'<li class="warn">'+esc(w)+'</li>').join('')+'</ul>';
+  if(q.unknown_author_ids&&q.unknown_author_ids.length){
+    h+='<p><b>Who are these note authors?</b> Type their names and save.</p><div id="auth">'+q.unknown_author_ids.filter(x=>/^\d+$/.test(x)).map(id=>'<div class="authrow"><code>ID '+esc(id)+'</code><input type="text" data-id="'+esc(id)+'" placeholder="Full name"></div>').join('')+'</div><p><button id="saveAuth">Save names and re-run</button></p>';
+  }
+  h+='<p class="sub">Saved in <code>'+esc(j.outDir)+'</code></p>';
+  $('result').innerHTML=h;$('result').classList.remove('hidden');
+  const b=$('saveAuth');if(b)b.onclick=()=>{const m={};document.querySelectorAll('#auth input').forEach(i=>{if(i.value.trim())m[i.dataset.id]=i.value.trim()});if(Object.keys(m).length)run(m);};
+}
+</script>
+</body>
+</html>

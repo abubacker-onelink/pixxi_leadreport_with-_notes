@@ -1,0 +1,23 @@
+{
+  "name": "buy-leads-dashboard",
+  "version": "1.0.0",
+  "description": "Upload a Pixi CRM Buy Leads Excel export and get the dashboard (HTML) plus Excel reports.",
+  "main": "src/pipeline.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "report": "node src/cli.js",
+    "sample": "node sample/make-sample.js",
+    "test": "node test/run-tests.js && node test/run-notes-tests.js",
+    "sample:notes": "node sample/make-notes-sample.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "express": "^5.3.0",
+    "multer": "^2.4.0"
+  }
+}

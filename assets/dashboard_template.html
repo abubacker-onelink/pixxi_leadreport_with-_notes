@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Buy leads report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#EDF0F3;--surface:#FFFFFF;--ink:#16202E;--muted:#5B6776;--line:#D8DEE5;--track:#E6EBF0;
+  --accent:#4F5BD5;--accent-soft:#E4E6FA;--good:#2E9E6B;--warn:#C2610C;--bad:#C9453F;
+  --pill-new:#E6EBF0;--pill-prog:#DCEAF8;--pill-hot:#D6F0E2;--pill-lost:#F7DEDC;
+  --shadow:0 1px 2px rgba(22,32,46,.06);--callout:#FFF3E3;--orsoft:#FDEBD3;--kept:#1F9D8F;--moved:#F28C28;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1520;--surface:#171F2C;--ink:#E7ECF2;--muted:#9AA7B6;--line:#2A3646;--track:#243040;
+    --accent:#8F98F2;--accent-soft:#272C58;--good:#4CC58E;--warn:#F0A263;--bad:#EF7B75;
+    --pill-new:#243040;--pill-prog:#1F3550;--pill-hot:#1B4332;--pill-lost:#4A2523;
+    --shadow:none;--callout:#3A2F1F;--orsoft:#3B2D18;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1520;--surface:#171F2C;--ink:#E7ECF2;--muted:#9AA7B6;--line:#2A3646;--track:#243040;
+  --accent:#8F98F2;--accent-soft:#272C58;--good:#4CC58E;--warn:#F0A263;--bad:#EF7B75;
+  --pill-new:#243040;--pill-prog:#1F3550;--pill-hot:#1B4332;--pill-lost:#4A2523;--shadow:none;--callout:#3A2F1F;--orsoft:#3B2D18;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px;line-height:1.45;font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:"Bricolage Grotesque","Figtree",system-ui,sans-serif;margin:0;letter-spacing:-.01em}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1280px;margin:0 auto;padding:20px 16px 48px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+h1{font-size:30px;font-weight:700;line-height:1.1}
+.sub{color:var(--muted);margin-top:6px;max-width:62ch}
+.count-live{font-family:"Bricolage Grotesque",sans-serif;font-size:15px;font-weight:600;text-align:right}
+.count-live b{font-size:30px;display:block;line-height:1}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:34px;margin-bottom:14px}
+.chips .hint{color:var(--muted)}
+.chip{display:inline-flex;gap:6px;align-items:center;background:var(--accent-soft);color:var(--ink);border:1px solid transparent;border-radius:999px;padding:4px 6px 4px 12px;font-size:13px}
+.chip span.x{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--surface);font-size:14px;line-height:1}
+.clear{background:none;border:0;color:var(--accent);text-decoration:underline;padding:4px 6px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
+.kpi .l{color:var(--muted);font-size:12.5px}
+.kpi .v{font-family:"Bricolage Grotesque",sans-serif;font-size:26px;font-weight:700;line-height:1.15;margin-top:2px}
+.kpi .s{color:var(--muted);font-size:12.5px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(12,1fr);margin-bottom:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow);min-width:0}
+.card h2{font-size:17px;font-weight:600}
+.card .note{color:var(--muted);font-size:12.5px;margin:2px 0 10px}
+.stack{display:flex;flex-direction:column;gap:12px;min-width:0}.s12{grid-column:span 12}.s8{grid-column:span 8}.s7{grid-column:span 7}.s6{grid-column:span 6}.s5{grid-column:span 5}.s4{grid-column:span 4}
+.sec{font-size:20px;margin:22px 0 4px}
+.sec-note{color:var(--muted);margin:0 0 10px;max-width:80ch}
+
+.mbtn{margin-top:10px;border:1px solid var(--accent);background:none;color:var(--accent);border-radius:8px;padding:6px 12px;font-weight:600}
+.mbtn[aria-pressed="true"]{background:var(--accent);color:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .mbtn[aria-pressed="true"]{color:#0E1520}}
+:root[data-theme="dark"] .mbtn[aria-pressed="true"]{color:#0E1520}
+#meta[hidden]{display:none}
+.callout{background:var(--callout);border-radius:8px;padding:10px 14px;margin:0 0 12px;font-size:13px}
+.kpi.k-nv{border-left:4px solid var(--ink)}.kpi.k-or{border-left:4px solid var(--moved)}.kpi.k-tl{border-left:4px solid var(--kept)}.kpi.k-rd{border-left:4px solid var(--bad)}
+.kpi.k-or .v{color:var(--moved)}.kpi.k-tl .v{color:var(--kept)}.kpi.k-rd .v{color:var(--bad)}
+#metaScore tbody tr{cursor:default}#metaScore tbody tr:hover{background:none}
+#metaScore .tot td{font-weight:700;background:var(--track)}
+.lost{color:var(--bad)}.recv{color:var(--moved)}
+.facts{margin:0;padding-left:18px}.facts li{margin:3px 0}
+.prow{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:center;margin:7px 0;font-size:13px}
+.pb{display:flex;align-items:center;gap:6px;height:11px;margin:2px 0}
+.pb i{display:block;height:11px;border-radius:3px;min-width:2px}
+.pb span{font-size:12px;color:var(--muted)}.pb.now span{color:var(--ink);font-weight:600}
+.wrow{display:grid;grid-template-columns:170px 1fr 74px;gap:8px;align-items:center;margin:4px 0;font-size:13px}
+.wt{position:relative;height:14px;background:var(--track);border-radius:3px}
+.wb{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.rule{position:absolute;top:-4px;bottom:-4px;border-left:2px dashed var(--bad)}
+.wv{font-weight:600;text-align:right}
+.lgd{display:flex;gap:16px;flex-wrap:wrap;margin:4px 0 10px;font-size:12.5px;color:var(--muted)}
+.lgd i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-2px}
+.lgd b{display:inline-block;width:0;height:12px;border-left:2px dashed var(--bad);margin-right:6px;vertical-align:-2px}
+.mt{min-width:980px}.mt th{text-align:left;padding:9px 10px;color:var(--muted);font-weight:500;font-size:12.5px;border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0}
+.mt td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;font-size:13px}
+.mt tr.rr td{background:var(--orsoft)}
+.mt small{display:block;color:var(--muted);font-size:12px}
+@media (max-width:980px){.wrow{grid-template-columns:118px 1fr 64px}}
+/* bars */
+.bars{display:flex;flex-direction:column;gap:3px}
+.bars.scroll{max-height:470px;overflow:auto;padding-right:4px}
+.bar{display:grid;grid-template-columns:minmax(90px,38%) 1fr auto;gap:8px;align-items:center;background:none;border:0;border-radius:6px;padding:4px 6px;text-align:left;width:100%}
+.bar:hover{background:var(--track)}
+.bar.on{background:var(--accent-soft)}
+.bar.dim{opacity:.42}
+.bl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+.bt{background:var(--track);border-radius:4px;height:12px;overflow:hidden}
+.bf{display:block;height:100%;border-radius:4px;min-width:2px;transition:width .25s}
+.bv{font-weight:600;font-size:13px;min-width:44px;text-align:right}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:2px 0 10px;flex-wrap:wrap}
+.seg button{background:none;border:0;padding:5px 10px;font-size:12.5px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .seg button[aria-pressed="true"]{color:#0E1520}}
+:root[data-theme="dark"] .seg button[aria-pressed="true"]{color:#0E1520}
+/* daily chart */
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin-bottom:6px}
+.lg{display:inline-flex;gap:6px;align-items:center;background:none;border:0;padding:2px 4px;border-radius:6px;font-size:12.5px}
+.lg i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.lg.on{background:var(--accent-soft)}.lg.dim{opacity:.45}
+.chartbox{position:relative}
+svg.daily{width:100%;height:auto;display:block}
+svg text{fill:var(--muted);font-size:11px;font-family:"Figtree",system-ui,sans-serif}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);padding:8px 10px;border-radius:8px;font-size:12.5px;line-height:1.4;z-index:5;min-width:140px;display:none;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.tip b{display:block;margin-bottom:2px}
+.tip .r{display:flex;justify-content:space-between;gap:12px}
+/* scorecard */
+table{border-collapse:collapse;width:100%}
+.score th,.score td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;font-size:13px}
+.score th:first-child,.score td:first-child{text-align:left}
+.score th{color:var(--muted);font-weight:500;font-size:12.5px}
+.score tbody tr{cursor:pointer}
+.score tbody tr:hover{background:var(--track)}
+.score tbody tr.on{background:var(--accent-soft)}
+.score tbody tr.dim{opacity:.45}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}
+/* leads table */
+.tools{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.tools input{font:inherit;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px;width:min(320px,100%)}
+.key{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:12.5px;align-items:center}
+.key svg{vertical-align:-3px;margin-right:4px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+.leads{min-width:1040px}
+.leads th{position:sticky;top:0;background:var(--surface);text-align:left;padding:0;border-bottom:1px solid var(--line);font-weight:500}
+.leads th button{background:none;border:0;width:100%;text-align:left;padding:9px 10px;color:var(--muted);font-size:12.5px}
+.leads th button[data-on="1"]{color:var(--ink);font-weight:600}
+.leads td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;font-size:13px}
+.leads tbody tr{cursor:pointer}
+.leads tbody tr:hover{background:var(--track)}
+.leads small{display:block;color:var(--muted);font-size:12px}
+.muted{color:var(--muted)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;white-space:nowrap}
+.g0{background:var(--pill-new)}.g1{background:var(--pill-prog)}.g2{background:var(--pill-hot)}.g3{background:var(--pill-lost)}
+.more{display:block;margin:12px auto 0;background:var(--accent);color:#fff;border:0;border-radius:8px;padding:8px 16px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .more{color:#0E1520}}
+:root[data-theme="dark"] .more{color:#0E1520}
+/* drawer */
+.veil{position:fixed;inset:0;background:rgba(10,16,24,.5);display:none;z-index:20}
+.veil.open{display:block}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--surface);z-index:21;padding:calc(18px + env(safe-area-inset-top,0px)) 18px calc(18px + env(safe-area-inset-bottom,0px));overflow:auto;transform:translateX(100%);transition:transform .22s;border-left:1px solid var(--line)}
+.drawer.open{transform:none}
+.drawer h3{font-size:22px;padding-right:40px}
+.drawer .close{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;border:1px solid var(--line);background:var(--bg);border-radius:8px;width:34px;height:34px}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:8px 12px;margin:14px 0}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.steps{margin:16px 0;padding:0;list-style:none;border-left:2px solid var(--line)}
+.steps li{position:relative;padding:0 0 16px 18px}
+.steps li::before{content:"";position:absolute;left:-7px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--muted)}
+.steps li.fc::before{background:var(--accent);border-color:var(--accent)}
+.steps li.lf::before{background:var(--warn);border-color:var(--warn);border-radius:2px;transform:rotate(45deg)}
+.steps li.none{color:var(--muted)}
+.steps .gap{display:block;color:var(--muted);font-size:12.5px}
+.noteq{background:var(--bg);border-radius:8px;padding:10px 12px;white-space:pre-wrap}
+footer{color:var(--muted);font-size:12.5px;margin-top:22px;max-width:90ch}
+.empty{color:var(--muted);padding:18px 4px}
+@media (max-width:980px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .s8,.s7,.s6,.s5,.s4{grid-column:span 12}
+  h1{font-size:25px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1 id="ttl">Buy leads report</h1>
+      <p class="sub" id="subt"></p>
+      <button class="mbtn" id="metaBtn" aria-pressed="false">Meta Ads report</button>
+    </div>
+    <div class="count-live" aria-live="polite"><b id="liveN">0</b><span id="liveOf"></span></div>
+  </header>
+
+  <div class="chips" id="chips" aria-label="Active filters"></div>
+  <section class="kpis" id="kpis" aria-label="Key numbers"></section>
+
+
+  <div class="grid">
+    <div class="card s8">
+      <h2>Leads created per day</h2>
+      <p class="note">Stacked by team. Click a day to filter to it, click again to clear.</p>
+      <div class="legend" id="dailyLegend"></div>
+      <div class="chartbox" id="dailyBox"><svg class="daily" id="daily" role="img" aria-label="Leads created per day, stacked by team"></svg><div class="tip" id="tip"></div></div>
+    </div>
+    <div class="s4 stack">
+      <div class="card">
+        <h2>Teams</h2>
+        <p class="note">Leads per team.</p>
+        <div class="bars" id="teamBars"></div>
+      </div>
+      <div class="card" id="statusCard">
+        <h2>Lead status</h2>
+        <p class="note">Active leads against buy leads from the lead pool.</p>
+        <div class="bars" id="statusBars"></div>
+      </div>
+    </div>
+      <div class="card s12">
+      <h2>Team scorecard</h2>
+      <p class="note">Click a team to filter. Figures respond to the other filters.</p>
+      <div style="overflow-x:auto"><table class="score" id="score"></table></div>
+    </div>
+  </div>
+
+  <section id="meta" hidden aria-label="Meta Ads report">
+    <h2 class="sec">Meta Ads report</h2>
+    <p class="sec-note" id="metaSub"></p>
+    <div class="kpis" id="metaKpis"></div>
+    <div class="callout"><b>How to read agents:</b> Create By is the agent the system auto-assigned when the lead came in. Agent Name is the agent who owns the lead now. If they are different, the system moved the lead by round robin (the original agent was inactive for 30 minutes).</div>
+    <div class="grid">
+      <div class="card s7"><h2>1. Agent scorecard</h2><p class="note">Who got each lead first, who lost it to round robin, who received it.</p><div style="overflow-x:auto"><table class="score" id="metaScore"></table></div></div>
+      <div class="s5 stack">
+        <div class="card"><h2>Campaign</h2><div class="bars" id="metaCamp"></div></div>
+        <div class="card"><h2>Quick facts</h2><ul class="facts" id="metaFacts"></ul></div>
+      </div>
+      <div class="card s6"><h2>2. Where the leads are now (stage)</h2><div class="bars" id="metaStage"></div></div>
+      <div class="card s6"><h2>3. Assigned at creation vs holding now</h2><div class="lgd"><span><i style="background:#9AA5B1"></i>Originally assigned (Create By)</span><span><i style="background:var(--ink)"></i>Holding now (Agent Name)</span></div><div id="metaPair"></div></div>
+      <div class="card s12"><h2>4. Time to first contact</h2><p class="note">Minutes from lead creation to first contact. The dashed line is the 30-minute round robin rule.</p>
+        <div class="lgd"><span><i style="background:var(--kept)"></i>Kept by original agent</span><span><i style="background:var(--moved)"></i>Reassigned (round robin)</span><span><b></b>30-min rule</span></div>
+        <div id="metaWait"></div><ul class="facts" id="metaNotes" style="margin-top:12px"></ul></div>
+      <div class="card s12"><h2>5. Lead details</h2><p class="note">Newest first. Orange rows were reassigned by round robin (Create By is not the same as Agent Name).</p><div class="tw"><table class="mt" id="metaTable"></table></div><p class="note" id="metaCap"></p></div>
+    </div>
+  </section>
+
+
+  <h2 class="sec">Contact timing</h2>
+  <p class="sec-note">First contact is the first time an agent reached the lead. Last follow-up is the most recent follow-up on record. Both come from the lead record, and only some leads have them.</p>
+  <div class="grid">
+    <div class="card s6">
+      <h2>Time from creation to first contact</h2>
+      <p class="note">How quickly each lead was reached after it came in.</p>
+      <div class="bars" id="respBars"></div>
+    </div>
+    <div class="card s6">
+      <h2>How recent is the last follow-up</h2>
+      <p class="note" id="fuNote"></p>
+      <div class="bars" id="fuBars"></div>
+    </div>
+
+  </div>
+
+  <h2 class="sec">Who, where from and what stage</h2>
+  <div class="grid">
+    <div class="card s6">
+      <h2>Agents</h2>
+      <div class="seg" id="agentMetric" role="group" aria-label="Agent measure">
+        <button data-m="n" aria-pressed="true">Leads</button>
+        <button data-m="fc" aria-pressed="false">First contact rate</button>
+        <button data-m="med" aria-pressed="false">Median time to first contact</button>
+        <button data-m="fu" aria-pressed="false">Follow-up rate</button>
+      </div>
+      <div class="bars scroll" id="agentBars"></div>
+    </div>
+    <div class="card s6">
+      <h2>Stage</h2>
+      <p class="note">Current stage of each lead.</p>
+      <div class="bars scroll" id="stageBars"></div>
+    </div>
+    <div class="card s6">
+      <h2>Lead source</h2>
+      <div class="bars" id="srcBars"></div>
+    </div>
+    <div class="card s6">
+      <h2>Project type</h2>
+      <p class="note">Leads that picked several types are grouped as Multiple types.</p>
+      <div class="bars" id="projBars"></div>
+    </div>
+  </div>
+
+  <h2 class="sec">Lead list</h2>
+  <div class="card">
+    <div class="tools">
+      <input type="search" id="q" placeholder="Search name, agent, ID or note" aria-label="Search leads">
+      <div class="key">
+        <span id="tableCount"></span>
+        <span><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>Created</span>
+        <span><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="4.5" style="fill:var(--accent)"/></svg>First contact</span>
+        <span><svg width="14" height="14" viewBox="0 0 14 14"><rect x="3.5" y="3.5" width="7" height="7" transform="rotate(45 7 7)" style="fill:var(--warn)"/></svg>Last follow-up</span>
+      </div>
+    </div>
+    <div class="tw"><table class="leads" id="leads"></table></div>
+    <button class="more" id="more" hidden>Show 50 more</button>
+  </div>
+
+  <footer>
+    First contact rate is the share of leads with a First Contact Date on record. A lead's stage can say Not Contacted while a date exists, or the reverse, so counts can differ slightly from the stage chart. Hot stages are Interested, Qualified, Closing, Searching Unit and Focus. Lead status separates active leads from leads moved to the pool; both were created in September. Meta Ads report: shown when the source is Meta Ads. A lead counts as reassigned when Create By is not the same as Agent Name. Phone numbers and emails are left out of this page.
+  </footer>
+</div>
+
+<div class="veil" id="veil"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle"></aside>
+
+<script>
+(function(){
+"use strict";
+var D=/*DATA*/;
+var MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var NDAYS=D.ndays, DAY0=D.day0, NOW=D.now;
+var RESP=["Within 1 hour","1 to 4 hours","4 to 24 hours","1 to 3 days","More than 3 days","No first contact on record"];
+var RESPC=["#2E9E6B","#74B36B","#D1B13F","#E08A3C","#D9534F","#8A96A3"];
+var FU=["Last 24 hours","1 to 3 days ago","4 to 7 days ago","8 to 14 days ago","15 or more days ago","No follow-up on record"];
+var FUC=["#2E9E6B","#74B36B","#D1B13F","#E08A3C","#D9534F","#8A96A3"];
+var HOT={"Interested":1,"Qualified":1,"Closing":1,"Searching Unit":1,"Focus":1};
+
+function dayLbl(d){var x=new Date((DAY0+d*1440)*60000);return x.getUTCDate()+" "+MON[x.getUTCMonth()]}
+var TICK=D.ndays>40?7:5;
+function pad(n){return n<10?"0"+n:""+n}
+function fmtDT(m){var d=new Date(m*60000);return d.getUTCDate()+" "+MON[d.getUTCMonth()]+", "+pad(d.getUTCHours())+":"+pad(d.getUTCMinutes())}
+function fmtDur(h){if(h==null)return "-";if(h<1)return Math.max(1,Math.round(h*60))+" min";if(h<48)return (Math.round(h*10)/10)+" h";return (Math.round(h/24*10)/10)+" days"}
+function fmtAgo(mins){var d=mins/1440;if(d<1)return Math.max(1,Math.round(mins/60))+" h ago";return Math.round(d)+" d ago"}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function num(n){return n.toLocaleString("en-US")}
+function median(a){if(!a.length)return null;a=a.slice().sort(function(x,y){return x-y});var m=a.length>>1;return a.length%2?a[m]:(a[m-1]+a[m])/2}
+function $(id){return document.getElementById(id)}
+
+var rows=D.rows.map(function(a){
+  var r={id:a[0],name:a[1]||"(no name)",a:a[2],s:a[3],st:a[4],p:a[5],ct:a[6],fc:a[7],lf:a[8],note:a[9]};
+  r.t=D.agentTeam[r.a];r.ls=a[10];r.cb=D.creators[a[11]];r.cp=a[12];
+  r.day=Math.floor((r.ct-DAY0)/1440);
+  r.rh=r.fc? Math.max(0,(r.fc-r.ct)/60):null;
+  r.rb=r.rh==null?5:(r.rh<1?0:r.rh<4?1:r.rh<24?2:r.rh<72?3:4);
+  r.fd=r.lf? (NOW-r.lf)/1440:null;
+  r.fb=r.fd==null?5:(r.fd<1?0:r.fd<4?1:r.fd<8?2:r.fd<15?3:4);
+  r.hot=!!HOT[D.stages[r.st]];
+  r.agent=D.agents[r.a];
+  r.hay=(r.name+" "+r.agent+" "+r.id+" "+r.note).toLowerCase();
+  return r;
+});
+var TOTAL=rows.length;
+
+var KEYS=["t","a","s","st","p","rb","fb","day","ls","cp"];
+var F={};KEYS.forEach(function(k){F[k]=new Set()});
+var agentMetric="n", sortKey="ct", sortDir=-1, shown=50, query="";
+
+function pass(r,skip){
+  for(var i=0;i<KEYS.length;i++){var k=KEYS[i];if(k===skip)continue;var s=F[k];if(s.size&&!s.has(r[k]))return false}
+  return true;
+}
+function sel(skip){var out=[];for(var i=0;i<rows.length;i++)if(pass(rows[i],skip))out.push(rows[i]);return out}
+function stats(list){
+  var n=list.length,fc=0,fu=0,hot=0,rs=[];
+  for(var i=0;i<n;i++){var r=list[i];if(r.fc){fc++;rs.push(r.rh)}if(r.lf)fu++;if(r.hot)hot++}
+  return {n:n,fc:fc,fu:fu,hot:hot,med:median(rs)};
+}
+function pct(a,b){return b?Math.round(a/b*100):0}
+
+function barList(id,key,items){
+  var el=$(id),set=F[key];
+  if(!items.length){el.innerHTML='<div class="empty">No leads match the current filters.</div>';return}
+  var max=1;items.forEach(function(x){if(x.bar>max)max=x.bar});
+  el.innerHTML=items.map(function(x){
+    var on=set.has(x.i),dim=set.size&&!on;
+    return '<button class="bar'+(on?' on':'')+(dim?' dim':'')+'" data-k="'+key+'" data-i="'+x.i+'" aria-pressed="'+on+'" title="'+esc(x.title||x.label)+'">'+
+      '<span class="bl">'+esc(x.label)+'</span><span class="bt"><span class="bf" style="width:'+(x.bar/max*100).toFixed(1)+'%;background:'+(x.color||"var(--accent)")+'"></span></span><span class="bv">'+x.txt+'</span></button>';
+  }).join("");
+}
+function countBy(list,field,len){var c=new Array(len).fill(0);list.forEach(function(r){c[r[field]]++});return c}
+
+function renderKpis(list){
+  var s=stats(list);
+  var items=[
+    ["Leads in view",num(s.n),pct(s.n,TOTAL)+"% of all leads in the period"],
+    ["First contact on record",num(s.fc),pct(s.fc,s.n)+"% of leads in view"],
+    ["Median time to first contact",s.med==null?"-":fmtDur(s.med),"among "+num(s.fc)+" contacted leads"],
+    ["Follow-up on record",num(s.fu),pct(s.fu,s.n)+"% of leads in view"],
+    ["Hot leads",num(s.hot),pct(s.hot,s.n)+"% of leads in view"]
+  ];
+  $("kpis").innerHTML=items.map(function(x){return '<div class="kpi"><div class="l">'+x[0]+'</div><div class="v">'+x[1]+'</div><div class="s">'+x[2]+'</div></div>'}).join("");
+  $("liveN").textContent=num(s.n);$("liveOf").textContent="of "+num(TOTAL)+" leads shown";
+}
+
+function renderChips(){
+  var chips=[];
+  function lab(k,i){
+    if(k==="t")return "Team: "+D.teams[i].name;
+    if(k==="ls")return "Status: "+D.statuses[i];
+    if(k==="cp")return "Campaign: "+D.campaigns[i];
+    if(k==="a")return "Agent: "+D.agents[i];
+    if(k==="s")return "Source: "+D.sources[i];
+    if(k==="st")return "Stage: "+D.stages[i];
+    if(k==="p")return "Project: "+D.projects[i];
+    if(k==="rb")return "First contact: "+RESP[i];
+    if(k==="fb")return "Last follow-up: "+FU[i];
+    if(k==="day"){var d=new Date((DAY0+i*1440)*60000);return "Created: "+d.getUTCDate()+" "+MON[d.getUTCMonth()]}
+  }
+  KEYS.forEach(function(k){F[k].forEach(function(i){chips.push('<button class="chip" data-k="'+k+'" data-i="'+i+'" aria-label="Remove filter '+esc(lab(k,i))+'">'+esc(lab(k,i))+'<span class="x" aria-hidden="true">&times;</span></button>')})});
+  $("chips").innerHTML=chips.length? chips.join("")+'<button class="clear" id="clearAll">Clear all</button>' : '<span class="hint">No filters applied. Pick anything below to narrow the view.</span>';
+}
+
+function renderDaily(){
+  var list=sel("day"),nt=D.teams.length;
+  var cnt=[];for(var d=0;d<NDAYS;d++){cnt.push(new Array(nt).fill(0))}
+  list.forEach(function(r){if(r.day>=0&&r.day<NDAYS)cnt[r.day][r.t]++});
+  var tot=cnt.map(function(c){return c.reduce(function(a,b){return a+b},0)});
+  var mx=Math.max.apply(null,tot.concat([1]));
+  var step=mx>800?200:mx>400?100:mx>200?50:mx>80?20:mx>40?10:5;
+  var top=Math.ceil(mx/step)*step;
+  var W=760,H=230,ml=40,mr=6,mt=8,mb=24,pw=W-ml-mr,ph=H-mt-mb,bw=pw/NDAYS;
+  var s="";
+  for(var v=0;v<=top;v+=step){var y=mt+ph-(v/top)*ph;s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+y+'" y2="'+y+'" style="stroke:var(--line)" stroke-width="1"/><text x="'+(ml-6)+'" y="'+(y+4)+'" text-anchor="end">'+v+'</text>'}
+  var dset=F.day;
+  for(var d=0;d<NDAYS;d++){
+    var x=ml+d*bw+bw*0.14,w=bw*0.72,acc=0,on=dset.has(d),dim=dset.size&&!on;
+    s+='<g opacity="'+(dim?0.35:1)+'">';
+    for(var t=0;t<nt;t++){var c=cnt[d][t];if(!c)continue;var h=c/top*ph;acc+=h;
+      s+='<rect x="'+x.toFixed(1)+'" y="'+(mt+ph-acc).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+Math.max(h,0.5).toFixed(1)+'" fill="'+D.teams[t].color+'"/>'}
+    s+='</g>';
+    if(on)s+='<rect x="'+(ml+d*bw).toFixed(1)+'" y="'+mt+'" width="'+bw.toFixed(1)+'" height="'+ph+'" fill="none" style="stroke:var(--accent)" stroke-width="2" rx="3"/>';
+    if(d%TICK===0||d===NDAYS-1)s+='<text x="'+(ml+d*bw+bw/2)+'" y="'+(H-6)+'" text-anchor="middle">'+dayLbl(d)+'</text>';
+    s+='<rect class="hit" data-day="'+d+'" tabindex="0" role="button" aria-pressed="'+on+'" aria-label="'+dayLbl(d)+', '+tot[d]+' leads" x="'+(ml+d*bw).toFixed(1)+'" y="'+mt+'" width="'+bw.toFixed(1)+'" height="'+ph+'" fill="transparent" style="cursor:pointer"/>';
+  }
+  var svg=$("daily");svg.setAttribute("viewBox","0 0 "+W+" "+H);svg.innerHTML=s;
+  window.__dailyCnt=cnt;
+  $("dailyLegend").innerHTML=D.teams.map(function(t,i){
+    if(i===D.teams.length-1&&!list.some(function(r){return r.t===i}))return "";
+    var on=F.t.has(i),dim=F.t.size&&!on;
+    return '<button class="lg'+(on?' on':'')+(dim?' dim':'')+'" data-k="t" data-i="'+i+'" aria-pressed="'+on+'"><i style="background:'+t.color+'"></i>'+esc(t.name)+'</button>'}).join("");
+}
+
+function renderTeams(){
+  var list=sel("t"),c=countBy(list,"t",D.teams.length);
+  barList("teamBars","t",D.teams.map(function(t,i){return {i:i,label:t.name,bar:c[i],txt:num(c[i]),color:t.color,title:t.name+" (leader: "+t.leader+")"}}).filter(function(x){return x.bar>0||F.t.has(x.i)||x.label!=="Unmapped"}));
+}
+function renderStatus(){
+  var c=countBy(sel("ls"),"ls",2);
+  barList("statusBars","ls",D.statuses.map(function(l,i){return {i:i,label:l,bar:c[i],txt:num(c[i]),color:i?"var(--warn)":"var(--accent)"}}));
+}
+function renderResp(){
+  var c=countBy(sel("rb"),"rb",6);
+  barList("respBars","rb",RESP.map(function(l,i){return {i:i,label:l,bar:c[i],txt:num(c[i]),color:RESPC[i]}}));
+  var f=countBy(sel("fb"),"fb",6);
+  barList("fuBars","fb",FU.map(function(l,i){return {i:i,label:l,bar:f[i],txt:num(f[i]),color:FUC[i]}}));
+}
+function renderScore(){
+  var list=sel("t"),by=D.teams.map(function(){return []});
+  list.forEach(function(r){by[r.t].push(r)});
+  var h='<thead><tr><th>Team</th><th>Leads</th><th>First contact</th><th>Median time to first contact</th><th>Follow-up</th><th>Hot leads</th></tr></thead><tbody>';
+  D.teams.forEach(function(t,i){
+    var s=stats(by[i]);if(!s.n&&!F.t.has(i))return;
+    var on=F.t.has(i),dim=F.t.size&&!on;
+    h+='<tr tabindex="0" data-k="t" data-i="'+i+'" class="'+(on?'on ':'')+(dim?'dim':'')+'"><td><span class="dot" style="background:'+t.color+'"></span>'+esc(t.name)+(t.leader!=="-"?'<span class="muted"> led by '+esc(t.leader)+'</span>':'')+'</td><td>'+num(s.n)+'</td><td>'+pct(s.fc,s.n)+'%</td><td>'+(s.med==null?'-':fmtDur(s.med))+'</td><td>'+pct(s.fu,s.n)+'%</td><td>'+num(s.hot)+'</td></tr>';
+  });
+  $("score").innerHTML=h+'</tbody>';
+}
+function renderAgents(){
+  var list=sel("a"),by={};
+  list.forEach(function(r){(by[r.a]=by[r.a]||[]).push(r)});
+  var items=Object.keys(by).map(function(k){var s=stats(by[k]);k=+k;
+    var v,txt,bar;
+    if(agentMetric==="n"){v=s.n;bar=s.n;txt=num(s.n)}
+    else if(agentMetric==="fc"){v=pct(s.fc,s.n);bar=v;txt=v+"%"}
+    else if(agentMetric==="fu"){v=pct(s.fu,s.n);bar=v;txt=v+"%"}
+    else{v=s.med;bar=s.med==null?0:s.med;txt=s.med==null?"-":fmtDur(s.med)}
+    return {i:k,label:D.agents[k],bar:bar,v:v,txt:txt,color:D.teams[D.agentTeam[k]].color,
+      title:D.agents[k]+", "+D.teams[D.agentTeam[k]].name+": "+num(s.n)+" leads, "+s.fc+" with first contact, "+s.fu+" with follow-up"}});
+  F.a.forEach(function(i){if(!by[i])items.push({i:i,label:D.agents[i],bar:0,v:-1,txt:"0",color:D.teams[D.agentTeam[i]].color})});
+  if(agentMetric==="med"){items.sort(function(a,b){return (a.v==null)-(b.v==null)||a.v-b.v})}
+  else items.sort(function(a,b){return b.v-a.v});
+  barList("agentBars","a",items);
+  var seg=$("agentMetric").querySelectorAll("button");
+  for(var i=0;i<seg.length;i++)seg[i].setAttribute("aria-pressed",seg[i].dataset.m===agentMetric);
+}
+function renderStages(){
+  var c=countBy(sel("st"),"st",D.stages.length);
+  var items=D.stages.map(function(l,i){return {i:i,label:l,bar:c[i],txt:num(c[i]),color:D.stageGroup[i]===2?"var(--good)":D.stageGroup[i]===3?"var(--bad)":D.stageGroup[i]===0?"#8A96A3":"var(--accent)"}}).filter(function(x){return x.bar>0||F.st.has(x.i)});
+  barList("stageBars","st",items);
+}
+function renderSrc(){
+  var c=countBy(sel("s"),"s",D.sources.length);
+  var items=D.sources.map(function(l,i){return {i:i,label:l,bar:c[i],txt:num(c[i])}}).filter(function(x){return x.bar>0||F.s.has(x.i)}).sort(function(a,b){return b.bar-a.bar});
+  barList("srcBars","s",items);
+  var p=countBy(sel("p"),"p",D.projects.length);
+  barList("projBars","p",D.projects.map(function(l,i){return {i:i,label:l,bar:p[i],txt:num(p[i]),color:D.projects[i]==="Not specified"?"#8A96A3":undefined}}).filter(function(x){return x.bar>0||F.p.has(x.i)}));
+}
+
+/* lead table */
+var COLS=[["name","Lead"],["agent","Agent and team"],["s","Source"],["p","Project type"],["st","Stage"],["ct","Created"],["fc","First contact"],["lf","Last follow-up"],[null,"Journey"]];
+function journey(r){
+  var span=NOW-DAY0,W=130,x=function(t){return 6+(t-DAY0)/span*(W-12)};
+  var s='<svg width="'+W+'" height="22" viewBox="0 0 '+W+' 22" aria-hidden="true"><line x1="6" x2="'+(W-6)+'" y1="11" y2="11" style="stroke:var(--line)" stroke-width="2"/>';
+  var xc=x(r.ct),xf=r.fc?x(r.fc):null,xl=r.lf?x(r.lf):null;
+  if(xf!=null)s+='<line x1="'+xc+'" x2="'+xf+'" y1="11" y2="11" style="stroke:var(--accent)" stroke-width="3" stroke-linecap="round"/>';
+  if(xl!=null){var from=xf!=null?xf:xc;s+='<line x1="'+Math.min(from,xl)+'" x2="'+Math.max(from,xl)+'" y1="11" y2="11" style="stroke:var(--warn)" stroke-width="3" stroke-linecap="round" opacity=".65"/>'}
+  s+='<circle cx="'+xc+'" cy="11" r="4" style="fill:var(--surface);stroke:var(--ink)" stroke-width="2"/>';
+  if(xf!=null)s+='<circle cx="'+xf+'" cy="11" r="4.5" style="fill:var(--accent)"/>';
+  if(xl!=null)s+='<rect x="'+(xl-4)+'" y="7" width="8" height="8" transform="rotate(45 '+xl+' 11)" style="fill:var(--warn)"/>';
+  return s+'</svg>';
+}
+function sortVal(r,k){
+  if(k==="name")return r.name.toLowerCase();
+  if(k==="agent")return r.agent.toLowerCase();
+  if(k==="s")return D.sources[r.s].toLowerCase();
+  if(k==="p")return r.p;
+  if(k==="st")return r.st;
+  if(k==="fc")return r.fc||null;
+  if(k==="lf")return r.lf||null;
+  if(k==="rh")return r.rh;
+  return r.ct;
+}
+var tableList=[];
+function renderTable(){
+  var list=sel(null);
+  if(query){var q=query.toLowerCase();list=list.filter(function(r){return r.hay.indexOf(q)>-1})}
+  list.sort(function(a,b){
+    var x=sortVal(a,sortKey),y=sortVal(b,sortKey);
+    if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;
+    return (x<y?-1:x>y?1:0)*sortDir;
+  });
+  tableList=list;
+  $("tableCount").textContent=num(list.length)+" leads";
+  var head='<thead><tr>'+COLS.map(function(c){
+    if(!c[0])return '<th><span style="padding:9px 10px;display:block;color:var(--muted);font-size:12.5px">'+c[1]+'</span></th>';
+    var on=sortKey===c[0];
+    return '<th aria-sort="'+(on?(sortDir>0?'ascending':'descending'):'none')+'"><button data-sort="'+c[0]+'" data-on="'+(on?1:0)+'">'+c[1]+(on?(sortDir>0?' &#9650;':' &#9660;'):'')+'</button></th>';
+  }).join("")+'</tr></thead>';
+  var body=list.slice(0,shown).map(function(r){
+    var t=D.teams[r.t];
+    return '<tr tabindex="0" data-id="'+r.id+'">'+
+      '<td><b>'+esc(r.name)+'</b><small>#'+r.id+'</small></td>'+
+      '<td>'+esc(r.agent)+'<small><span class="dot" style="background:'+t.color+'"></span>'+esc(t.name)+'</small></td>'+
+      '<td>'+esc(D.sources[r.s])+'</td>'+
+      '<td>'+esc(D.projects[r.p])+'</td>'+
+      '<td><span class="pill g'+D.stageGroup[r.st]+'">'+esc(D.stages[r.st])+'</span>'+(r.ls?'<small>Buy leads from lead pool</small>':'')+'</td>'+
+      '<td>'+fmtDT(r.ct)+'</td>'+
+      '<td>'+(r.fc?fmtDT(r.fc)+'<small>after '+fmtDur(r.rh)+'</small>':'<span class="muted">None</span>')+'</td>'+
+      '<td>'+(r.lf?fmtDT(r.lf)+'<small>'+fmtAgo(NOW-r.lf)+'</small>':'<span class="muted">None</span>')+'</td>'+
+      '<td>'+journey(r)+'</td></tr>';
+  }).join("");
+  $("leads").innerHTML=head+'<tbody>'+(body||'<tr><td colspan="9" class="empty">No leads match the current filters.</td></tr>')+'</tbody>';
+  var more=$("more");more.hidden=list.length<=shown;
+  more.textContent="Show "+Math.min(50,list.length-shown)+" more";
+}
+
+/* drawer */
+var lastFocus=null;
+function openDrawer(id){
+  var r=null;for(var i=0;i<rows.length;i++)if(rows[i].id===id){r=rows[i];break}
+  if(!r)return;
+  var t=D.teams[r.t];
+  var steps='<li><b>Created</b><br>'+fmtDT(r.ct)+' '+new Date(r.ct*60000).getUTCFullYear()+'</li>';
+  if(r.fc)steps+='<li class="fc"><b>First contact</b><br>'+fmtDT(r.fc)+'<span class="gap">'+fmtDur(r.rh)+' after the lead was created</span></li>';
+  else steps+='<li class="none"><b>First contact</b><br>Not on record</li>';
+  if(r.lf)steps+='<li class="lf"><b>Last follow-up</b><br>'+fmtDT(r.lf)+'<span class="gap">'+(r.fc?fmtDur(Math.max(0,(r.lf-r.fc)/60))+' after first contact, ':'')+fmtAgo(NOW-r.lf)+' at export</span></li>';
+  else steps+='<li class="none"><b>Last follow-up</b><br>Not on record</li>';
+  $("drawer").innerHTML='<button class="close" id="dClose" aria-label="Close details">&times;</button><h3 id="dTitle">'+esc(r.name)+'</h3><div class="muted">Lead #'+r.id+'</div>'+
+    '<dl class="kv"><dt>Agent</dt><dd>'+esc(r.agent)+'</dd><dt>Team</dt><dd><span class="dot" style="background:'+t.color+'"></span>'+esc(t.name)+'</dd><dt>Source</dt><dd>'+esc(D.sources[r.s])+'</dd><dt>Project type</dt><dd>'+esc(D.projects[r.p])+'</dd><dt>Stage</dt><dd><span class="pill g'+D.stageGroup[r.st]+'">'+esc(D.stages[r.st])+'</span></dd><dt>Lead status</dt><dd>'+esc(D.statuses[r.ls])+'</dd></dl>'+
+    '<h3 style="font-size:16px">Timeline</h3><ul class="steps">'+steps+'</ul>'+
+    '<h3 style="font-size:16px;margin-bottom:6px">Last note</h3><div class="noteq">'+(r.note?esc(r.note):'<span class="muted">No note on record</span>')+'</div>';
+  lastFocus=document.activeElement;
+  $("veil").classList.add("open");$("drawer").classList.add("open");
+  $("dClose").focus();
+}
+function closeDrawer(){
+  $("veil").classList.remove("open");$("drawer").classList.remove("open");
+  if(lastFocus&&lastFocus.focus)lastFocus.focus();
+}
+
+
+/* Meta Ads report */
+var META=D.sources.indexOf("Meta Ads");
+var STG_NO=D.stages.indexOf("No Answer"),STG_NI=D.stages.indexOf("Not Interested"),STG_NQ=D.stages.indexOf("Not Qualified");
+function metaActive(){return META>=0}
+function metaSel(){return META>=0&&F.s.size===1&&F.s.has(META)}
+function fmtDay(m){var d=new Date(m*60000);return d.getUTCDate()+" "+MON[d.getUTCMonth()]+" "+d.getUTCFullYear()}
+function fmtDS(m){var d=new Date(m*60000);return d.getUTCDate()+" "+MON[d.getUTCMonth()]+" "+pad(d.getUTCHours())+":"+pad(d.getUTCMinutes())}
+function fmtWait(min){min=Math.round(min);if(min<60)return min+" min";var h=Math.floor(min/60),m=min%60;if(h<24)return h+"h "+pad(m)+"m";return Math.floor(h/24)+"d "+(h%24)+"h"}
+function renderMeta(){
+  var on=metaActive();
+  $("meta").hidden=!on;
+  $("metaBtn").setAttribute("aria-pressed",metaSel());
+  if(!on)return;
+  var mem={};D.teams.forEach(function(t,i){(t.members||[]).forEach(function(nm){mem[nm]=i})});
+  D.agents.forEach(function(nm,ai){if(mem[nm]==null)mem[nm]=D.agentTeam[ai]});
+  var ft=F.t;F.t=new Set();var base=sel("s");F.t=ft;
+  var list=base.filter(function(r){return r.s===META&&(!ft.size||ft.has(r.t)||ft.has(mem[r.cb]))}),n=list.length;
+  if(!n){$("metaKpis").innerHTML='<div class="empty">No Meta Ads leads match the current filters.</div>';["metaScore","metaCamp","metaFacts","metaStage","metaPair","metaWait","metaNotes","metaTable"].forEach(function(i){$(i).innerHTML=""});$("metaSub").textContent="";$("metaCap").textContent="";return}
+  var mn=Infinity,mx=0,camps={},sts={};
+  list.forEach(function(r){if(r.ct<mn)mn=r.ct;if(r.ct>mx)mx=r.ct;camps[D.campaigns[r.cp]]=1;sts[D.statuses[r.ls]]=1});
+  $("metaSub").textContent=fmtDay(mn)+(fmtDay(mn)===fmtDay(mx)?"":" to "+fmtDay(mx))+"   |   Source: Meta Ads   |   Campaign: "+Object.keys(camps).join(", ")+"   |   Status: "+Object.keys(sts).join(", ");
+  var re=list.filter(function(r){return r.cb!==r.agent});
+  var waits=list.filter(function(r){return r.rh!=null}).map(function(r){return r.rh*60});
+  var med=median(waits),noans=list.filter(function(r){return r.st===STG_NO}).length;
+  var k=[["k-nv",num(n),"Total leads in view"],["k-or",num(re.length)+" ("+pct(re.length,n)+"%)","Reassigned by system (round robin)"],["k-tl",med==null?"-":fmtWait(med),"Median wait before first contact"],["k-rd",num(noans)+" ("+pct(noans,n)+"%)","Stage = No Answer"],["k-nv",num(list.filter(function(r){return r.hot}).length),"Hot leads (interested or better)"]];
+  $("metaKpis").innerHTML=k.map(function(x){return '<div class="kpi '+x[0]+'"><div class="v">'+x[1]+'</div><div class="l">'+x[2]+'</div></div>'}).join("");
+  // scorecard
+  var m={};function g(nm){return m[nm]||(m[nm]={a:0,l:0,rv:0,h:0})}
+  list.forEach(function(r){g(r.cb).a++;g(r.agent).h++;if(r.cb!==r.agent){g(r.cb).l++;g(r.agent).rv++}});
+  Object.keys(mem).forEach(function(nm){if(mem[nm]===D.teams.length-1)return;if(F.t.size&&!F.t.has(mem[nm]))return;g(nm)});
+  var names=Object.keys(m).sort(function(x,y){return m[y].h-m[x].h||m[y].a-m[x].a||(x<y?-1:1)});
+  if(F.t.size)names=names.filter(function(nm){return mem[nm]!=null&&F.t.has(mem[nm])});
+  var T={a:0,l:0,rv:0,h:0};
+  var h='<thead><tr><th>Agent</th><th>Assigned at creation</th><th>Lost to round robin</th><th>Received by round robin</th><th>Holding now</th></tr></thead><tbody>';
+  names.forEach(function(nm){var v=m[nm];T.a+=v.a;T.l+=v.l;T.rv+=v.rv;T.h+=v.h;
+    h+='<tr><td>'+esc(nm)+'</td><td>'+(v.a||"-")+'</td><td class="lost">'+(v.l||"-")+'</td><td class="recv">'+(v.rv||"-")+'</td><td><b>'+v.h+'</b></td></tr>'});
+  h+='<tr class="tot"><td>TOTAL</td><td>'+T.a+'</td><td>'+T.l+'</td><td>'+T.rv+'</td><td>'+T.h+'</td></tr></tbody>';
+  $("metaScore").innerHTML=h;
+  // campaign bars
+  var cc=countBy(sel("cp"),"cp",D.campaigns.length);
+  barList("metaCamp","cp",D.campaigns.map(function(l,i){return {i:i,label:l,bar:cc[i],txt:num(cc[i])}}).filter(function(x){return x.bar>0||F.cp.has(x.i)}));
+  // stage bars
+  var sc=countBy(list,"st",D.stages.length);
+  barList("metaStage","st",D.stages.map(function(l,i){return {i:i,label:l,bar:sc[i],txt:num(sc[i])+" ("+pct(sc[i],n)+"%)",color:D.stageGroup[i]===3?"var(--bad)":"var(--kept)"}}).filter(function(x){return x.bar>0}));
+  // quick facts
+  var fast=waits.filter(function(w){return w<=5}).length,night=waits.filter(function(w){return w>=540}).length;
+  var ni=sc[STG_NI]||0,nq=sc[STG_NQ]||0,hot=list.filter(function(r){return r.hot}).length;
+  $("metaFacts").innerHTML=["<li>"+hot+" qualified / interested</li>","<li>"+ni+" not interested</li>","<li>"+nq+" not qualified</li>","<li>"+fast+" leads reached within 5 min</li>","<li>"+night+" leads waited 9h or more</li>"].join("");
+  // pair chart
+  var first={};names.forEach(function(nm){var f=nm.split(" ")[0];first[f]=(first[f]||0)+1});
+  var mxp=1;names.forEach(function(nm){mxp=Math.max(mxp,m[nm].a,m[nm].h)});
+  $("metaPair").innerHTML=names.map(function(nm){var f=nm.split(" ")[0],lab=first[f]>1?nm:f,v=m[nm];
+    return '<div class="prow"><span title="'+esc(nm)+'">'+esc(lab)+'</span><div><div class="pb"><i style="width:'+(v.a/mxp*100).toFixed(1)+'%;background:#9AA5B1"></i><span>'+v.a+'</span></div><div class="pb now"><i style="width:'+(v.h/mxp*100).toFixed(1)+'%;background:var(--ink)"></i><span>'+v.h+'</span></div></div></div>'}).join("");
+  // wait chart (newest first)
+  var byNew=list.slice().sort(function(a,b){return b.ct-a.ct}),CAP=40,shown=byNew.slice(0,CAP);
+  var mxw=60;shown.forEach(function(r){if(r.rh!=null&&r.rh*60>mxw)mxw=r.rh*60});
+  $("metaWait").innerHTML=shown.map(function(r){var moved=r.cb!==r.agent,mins=r.rh==null?null:r.rh*60;
+    return '<div class="wrow"><span>'+r.id+'  '+fmtDS(r.ct)+'</span><span class="wt">'+(mins==null?'':'<span class="wb" style="width:'+Math.max(0.6,mins/mxw*100).toFixed(1)+'%;background:'+(moved?'var(--moved)':'var(--kept)')+'"></span>')+'<i class="rule" style="left:'+(30/mxw*100).toFixed(2)+'%"></i></span><span class="wv">'+(mins==null?'<span class="muted">none yet</span>':fmtWait(mins))+'</span></div>'}).join("");
+  var notes=[];
+  var rs=re.filter(function(r){return r.rh!=null&&r.rh*60>=30&&r.rh*60<=60}).length;
+  if(re.length)notes.push(re.length+" of "+n+" leads were taken from the original agent by the system"+(rs?"; "+rs+" of them were first called 30 to 60 min after creation.":"."));
+  else notes.push("No lead was reassigned in this view. Reassignment shows up when Create By is different from Agent Name.");
+  var late=list.filter(function(r){return r.cb===r.agent&&r.rh!=null&&r.rh*60>30});
+  if(late.length)notes.push(late.length+" lead"+(late.length>1?"s were":" was")+" not reassigned but still waited more than 30 min for first contact (lead "+late.slice(0,3).map(function(r){return r.id}).join(", ")+(late.length>3?" and others":"")+").");
+  if(night)notes.push(night+" lead"+(night>1?"s":"")+" waited 9 hours or more before first contact (likely created overnight, no night coverage).");
+  var nof=list.filter(function(r){return r.rh==null}).length;
+  if(nof)notes.push(nof+" lead"+(nof>1?"s have":" has")+" no first contact on record.");
+  $("metaNotes").innerHTML=notes.map(function(x){return "<li>"+esc(x)+"</li>"}).join("");
+  // details table
+  var DC=100;
+  $("metaTable").innerHTML='<thead><tr><th>Lead</th><th>Created</th><th>First contact</th><th>Wait</th><th>Last follow-up</th><th>Stage</th><th>Create By<small>(auto-assigned)</small></th><th>Agent Name<small>(current)</small></th><th>Last note</th></tr></thead><tbody>'+
+   byNew.slice(0,DC).map(function(r){var moved=r.cb!==r.agent;
+    return '<tr'+(moved?' class="rr"':'')+'><td><b>'+r.id+'</b><small>'+esc(r.name)+'</small></td><td>'+fmtDS(r.ct)+'</td><td>'+(r.fc?fmtDS(r.fc):'<span class="muted">None</span>')+'</td><td>'+(r.rh==null?'-':fmtWait(r.rh*60))+'</td><td>'+(r.lf?fmtDS(r.lf):'<span class="muted">None</span>')+'</td><td><span class="pill g'+D.stageGroup[r.st]+'">'+esc(D.stages[r.st])+'</span></td><td>'+esc(r.cb)+'</td><td>'+esc(r.agent)+'</td><td>'+(r.note?esc(r.note):'<span class="muted">no note</span>')+'</td></tr>'}).join("")+'</tbody>';
+  $("metaCap").textContent=(byNew.length>CAP?"Time chart shows the latest "+CAP+" of "+byNew.length+" leads. ":"")+(byNew.length>DC?"Table shows the latest "+DC+" of "+byNew.length+" leads.":"");
+}
+
+function renderCharts(){
+  var list=sel(null);
+  renderKpis(list);renderChips();renderDaily();renderTeams();renderStatus();renderResp();renderScore();renderAgents();renderStages();renderSrc();renderMeta();renderTable();
+}
+function toggle(k,i){var s=F[k];if(s.has(i))s.delete(i);else s.add(i);shown=50;renderCharts()}
+
+document.addEventListener("click",function(e){
+  var el=e.target.closest("[data-k]");
+  if(el&&el.dataset.i!=null){toggle(el.dataset.k,+el.dataset.i);return}
+  var hit=e.target.closest(".hit");
+  if(hit){toggle("day",+hit.dataset.day);return}
+  if(e.target.closest("#clearAll")){KEYS.forEach(function(k){F[k].clear()});shown=50;renderCharts();return}
+  var sb=e.target.closest("[data-sort]");
+  if(sb){var k=sb.dataset.sort;if(sortKey===k)sortDir=-sortDir;else{sortKey=k;sortDir=(k==="name"||k==="agent"||k==="s")?1:-1}renderTable();return}
+  var seg=e.target.closest("#agentMetric button");
+  if(seg){agentMetric=seg.dataset.m;renderAgents();return}
+  if(e.target.closest("#metaBtn")){var was=metaSel();F.s.clear();if(!was&&META>=0)F.s.add(META);F.cp.clear();shown=50;renderCharts();return}
+  if(e.target.closest("#more")){shown+=50;renderTable();return}
+  if(e.target.closest("#dClose")||e.target.id==="veil"){closeDrawer();return}
+  var tr=e.target.closest("#leads tbody tr[data-id]");
+  if(tr){openDrawer(+tr.dataset.id)}
+});
+document.addEventListener("keydown",function(e){
+  if(e.key==="Escape"&&$("drawer").classList.contains("open")){closeDrawer();return}
+  if(e.key==="Enter"||e.key===" "){
+    var t=e.target;
+    if(t.matches&&t.matches("svg .hit")){e.preventDefault();toggle("day",+t.dataset.day)}
+    else if(t.matches&&t.matches("#score tbody tr")){e.preventDefault();toggle("t",+t.dataset.i)}
+    else if(t.matches&&t.matches("#leads tbody tr[data-id]")){e.preventDefault();openDrawer(+t.dataset.id)}
+  }
+});
+$("q").addEventListener("input",function(e){query=e.target.value.trim();shown=50;renderTable()});
+
+/* daily tooltip */
+var tip=$("tip"),box=$("dailyBox");
+box.addEventListener("pointermove",function(e){
+  var h=e.target.closest&&e.target.closest(".hit");
+  if(!h){tip.style.display="none";return}
+  var d=+h.dataset.day,c=window.__dailyCnt[d],tot=c.reduce(function(a,b){return a+b},0);
+  var html='<b>'+dayLbl(d)+', '+tot+' leads</b>';
+  D.teams.forEach(function(t,i){if(c[i])html+='<div class="r"><span><span class="dot" style="background:'+t.color+'"></span>'+esc(t.name)+'</span><span>'+c[i]+'</span></div>'});
+  tip.innerHTML=html;tip.style.display="block";
+  var br=box.getBoundingClientRect(),x=e.clientX-br.left+14,y=e.clientY-br.top-10;
+  if(x+tip.offsetWidth>br.width)x=e.clientX-br.left-tip.offsetWidth-14;
+  tip.style.left=Math.max(0,x)+"px";tip.style.top=Math.max(0,y)+"px";
+});
+box.addEventListener("pointerleave",function(){tip.style.display="none"});
+
+document.title=D.title;$("ttl").textContent=D.title;$("subt").textContent=D.subtitle;$("fuNote").textContent="Measured to the export time, "+D.exportLabel+".";
+if(!D.hasPool)$("statusCard").hidden=true;
+if(D.presetSource){var pix=D.sources.indexOf(D.presetSource);if(pix>-1)F.s.add(pix)}
+renderCharts();
+})();
+</script>
+</body>
+</html>

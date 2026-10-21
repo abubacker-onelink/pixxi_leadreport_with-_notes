@@ -1,0 +1,101 @@
+{
+  "_help": "Owner (Ram) edits this file when people join, leave or move teams. Names must match the 'Agent Name' column in Pixi exactly (extra spaces are ignored).",
+  "teams": [
+    {
+      "name": "George's Team",
+      "leader": "Georges Bechara",
+      "color": "#3B82C4",
+      "members": [
+        "Georges Bechara",
+        "Omama Hussain",
+        "Muhammad Umar Ali",
+        "Farida Mohammad",
+        "Mazen Abou Karroum",
+        "Mohamed Aly Reyad Sheba",
+        "Gouthaman Asokan",
+        "Adel Saad",
+        "Ainam Dehgani",
+        "Camila Lopez"
+      ]
+    },
+    {
+      "name": "Jad's Team",
+      "leader": "Jad Roumanos",
+      "color": "#5FA04B",
+      "members": [
+        "Jad Roumanos",
+        "Mykyta Goliev",
+        "Ahmed Moustafa Aboutaleb",
+        "Scholtz Quintin Marius",
+        "Ben James Collins",
+        "Moath"
+      ]
+    },
+    {
+      "name": "Ragheb's Team",
+      "leader": "Ragheb Al Husseini",
+      "color": "#D9772B",
+      "members": [
+        "Ragheb Al Husseini",
+        "Ridvan Alsabbagh",
+        "Seyed Mohammad Tabatabaei",
+        "Dania Al Husseini",
+        "Alaa Nadim Alawar",
+        "Anastasia Ogurtsova"
+      ]
+    },
+    {
+      "name": "Elite Team",
+      "leader": "Michel Saab",
+      "color": "#1FA3A8",
+      "members": [
+        "Marina Tok-Ogly"
+      ]
+    }
+  ],
+  "exclude_agents": [
+    "Mohamed Ahmed Gomaa Abdelaal",
+    "Abubacker Sideek"
+  ],
+  "exclude_ids": [
+    1539972
+  ],
+  "hot_stages": [
+    "Interested",
+    "Qualified",
+    "Closing",
+    "Searching Unit",
+    "Focus"
+  ],
+  "lost_stages": [
+    "Not Interested",
+    "Not Qualified",
+    "Wrong Number",
+    "Job Seeker",
+    "Owner"
+  ],
+  "stage_order": [
+    "Not Contacted",
+    "No Answer",
+    "Opener Sent",
+    "Replied -> Need to Clarify Interest",
+    "Follow-up",
+    "Short Follow-Up",
+    "Long Follow- Up",
+    "Interested",
+    "Searching Unit",
+    "Focus",
+    "Qualified",
+    "Closing",
+    "Agent",
+    "Only Distress",
+    "Not Interested",
+    "Not Qualified",
+    "Wrong Number",
+    "Job Seeker",
+    "Owner"
+  ],
+  "test_markers": [
+    "test"
+  ]
+}
