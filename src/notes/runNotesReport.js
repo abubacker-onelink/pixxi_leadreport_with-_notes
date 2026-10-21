@@ -12,6 +12,9 @@ const NAVY = 'FF1F2A44', TOTAL = 'FFD9E1F2', GREY = 'FF5B6776';
 const F = (o = {}) => ({ name: 'Arial', size: 10, ...o });
 const fill = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
 
+// Pixi stores line breaks as "#:;br:;#"
+const cleanText = (t) => String(t || '').replace(/\s*#:;br:;#\s*/g, ' – ');
+
 function loadAuthors(p) {
   const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
   const m = {};
@@ -39,8 +42,12 @@ async function runNotesReport(notesCsv, leadsXlsx, options = {}) {
 
   log('Reading leads file...');
   const { leads: leadInfo, kind } = await readLeads(leadsXlsx);
+  if (options.leadIds) {   // e.g. only the leads kept in the dashboard (period, source, test leads removed)
+    const keep = new Set([...options.leadIds].map(Number));
+    for (const id of [...leadInfo.keys()]) if (!keep.has(id)) leadInfo.delete(id);
+  }
   const { leads: notesByLead, warnings, statusCounts } = options.fetchFromPixi
-    ? await fetchPixiNotes([...leadInfo.keys()], { token: options.pixxiToken, fetchImpl: options.fetchImpl, log })
+    ? await fetchPixiNotes([...leadInfo.keys()], { token: options.pixxiToken, fetchImpl: options.fetchImpl, onProgress: options.onProgress, log })
     : readNotesCsv(notesCsv);
   if (!notesByLead.size) throw new Error(options.fetchFromPixi ? 'No valid lead IDs found in the leads Excel.' : 'No leads found in the notes CSV.');
 
@@ -50,12 +57,12 @@ async function runNotesReport(notesCsv, leadsXlsx, options = {}) {
   const items = [];
   for (const [id, n] of notesByLead) {
     let info = leadInfo.get(id);
-    if (!info) { notFound.push(id); info = { id, name: '(not in leads file)', agent: 'Unknown', stage: '', source: '', created: null }; }
+    if (!info) { notFound.push(id); info = { id, name: '(not in leads file)', agent: 'Unknown', stage: '', source: '', campaign: '', created: null }; }
     const notes = n.notes
       .map((x) => {
         const who = authors[x.by];
         if (!who) unknownIds.add(x.by || '(blank)');
-        return { time: x.time, text: redact(x.message), by: who || 'Unknown' };
+        return { time: x.time, text: redact(cleanText(x.message)), by: who || 'Unknown' };
       })
       .sort((a, b) => (a.time ?? 9e15) - (b.time ?? 9e15));
     items.push({ ...info, notes });
@@ -83,58 +90,76 @@ async function runNotesReport(notesCsv, leadsXlsx, options = {}) {
   wb.calcProperties = { fullCalcOnLoad: true };
   const title = options.title || `${kind} leads notes report`;
 
-  // ===== Leads with Notes
+  // ===== sheets (order like the team report: Summary, Leads with Notes, one tab per agent, Leads without Notes)
+  const wsS = wb.addWorksheet('Summary');
   const wsN = wb.addWorksheet('Leads with Notes');
-  const maxN = withNotes.reduce((m, i) => Math.max(m, i.notes.length), 0);
-  const fixed = ['Lead ID', 'Lead Name', 'Created', 'Agent', 'Stage', 'Notes', 'First note', 'Last note'];
-  const heads = fixed.concat(Array.from({ length: maxN }, (_, k) => `Follow-up ${k + 1}`));
-  heads.forEach((h, i) => {
-    const c = wsN.getCell(1, i + 1);
-    c.value = h; c.font = F({ bold: true, color: { argb: 'FFFFFFFF' } }); c.fill = fill(NAVY);
-    c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-  });
-  wsN.getRow(1).height = 26;
   const day = (i) => (i.created === null ? -1 : D.startOfDay(i.created));
   withNotes.sort((a, b) => day(a) - day(b) || b.notes.length - a.notes.length || a.agent.localeCompare(b.agent) || a.id - b.id);
-  let prevDay = null, shade = false;
-  withNotes.forEach((it, ri) => {
-    const r = ri + 2, d = day(it);
-    const newDay = prevDay !== null && d !== prevDay;
-    if (prevDay === null || newDay) shade = prevDay === null ? true : !shade;
-    prevDay = d;
-    const base = shade ? 'FFF3F5F9' : 'FFFFFFFF';
-    const times = it.notes.map((x) => x.time).filter((t) => t !== null);
-    const vals = [it.id, redact(it.name), it.created === null ? null : D.toDate(it.created), it.agent, it.stage, it.notes.length,
-      times.length ? D.toDate(times[0]) : null, times.length ? D.toDate(times[times.length - 1]) : null];
-    vals.forEach((v, i) => { if (v !== null) wsN.getCell(r, i + 1).value = v; });
-    wsN.getCell(r, 3).numFmt = 'dd-mmm-yyyy hh:mm'; wsN.getCell(r, 7).numFmt = 'dd-mmm-yyyy hh:mm'; wsN.getCell(r, 8).numFmt = 'dd-mmm-yyyy hh:mm';
-    const sameAgent = (a) => a.trim().toLowerCase() === it.agent.trim().toLowerCase();
-    it.notes.forEach((nt, k) => {
-      const dateLine = nt.time === null ? '(no date)' : D.fmtDow(nt.time);
-      const by = sameAgent(nt.by) ? '' : ` (by ${nt.by})`;
-      wsN.getCell(r, 9 + k).value = { richText: [
-        { font: F({ bold: true }), text: dateLine + '\n' },
-        { font: F(), text: (nt.text || '(empty note)').slice(0, 3000) + by },
-      ] };
+  const maxFor = (list) => list.reduce((m, i) => Math.max(m, i.notes.length), 0);
+  const FIXED = ['Lead ID', 'Lead Name', 'Campaign', 'Created', 'Agent', 'Stage', 'Notes', 'First note', 'Last note'];
+  const FU = FIXED.length; // follow-ups start in column FU + 1
+
+  function writeNotesSheet(ws, list, emptyMsg) {
+    const maxN = maxFor(list);
+    const heads = FIXED.concat(Array.from({ length: maxN }, (_, k) => `Follow-up ${k + 1}`));
+    heads.forEach((h, i) => {
+      const c = ws.getCell(1, i + 1);
+      c.value = h; c.font = F({ bold: true, color: { argb: 'FFFFFFFF' } }); c.fill = fill(NAVY);
+      c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
     });
-    for (let c = 1; c <= heads.length; c++) {
-      const cell = wsN.getCell(r, c);
-      const followIdx = c - 8; // 1-based follow-up number
-      const tint = followIdx > 0 && followIdx % 2 === 0 ? (shade ? 'FFE3E9F4' : 'FFEEF2F8') : base;
-      cell.fill = fill(tint);
-      cell.alignment = { vertical: 'top', wrapText: c >= 9 || c === 2, horizontal: c === 1 || c === 6 ? 'center' : 'left' };
-      if (!cell.font || cell.font.name !== 'Arial') cell.font = F();
-      if (newDay) cell.border = { top: { style: 'medium', color: { argb: 'FF8A96A3' } } };
-    }
+    ws.getRow(1).height = 26;
+    let prevDay = null, shade = false;
+    list.forEach((it, ri) => {
+      const r = ri + 2, d = day(it);
+      const newDay = prevDay !== null && d !== prevDay;
+      if (prevDay === null || newDay) shade = prevDay === null ? true : !shade;
+      prevDay = d;
+      const base = shade ? 'FFF3F5F9' : 'FFFFFFFF';
+      const times = it.notes.map((x) => x.time).filter((t) => t !== null);
+      const vals = [it.id, redact(it.name), it.campaign || '', it.created === null ? null : D.toDate(it.created), it.agent, it.stage, it.notes.length,
+        times.length ? D.toDate(times[0]) : null, times.length ? D.toDate(times[times.length - 1]) : null];
+      vals.forEach((v, i) => { if (v !== null) ws.getCell(r, i + 1).value = v; });
+      [4, 8, 9].forEach((c) => { ws.getCell(r, c).numFmt = 'dd-mm-yyyy hh:mm'; });
+      const sameAgent = (a) => a.trim().toLowerCase() === it.agent.trim().toLowerCase();
+      it.notes.forEach((nt, k) => {
+        const dateLine = nt.time === null ? '(no date)' : D.fmtDow(nt.time);
+        const by = sameAgent(nt.by) ? '' : ` (by ${nt.by})`;
+        ws.getCell(r, FU + 1 + k).value = { richText: [
+          { font: F({ bold: true }), text: dateLine + '\n' },
+          { font: F(), text: (nt.text || '(empty note)').slice(0, 3000) + by },
+        ] };
+      });
+      for (let c = 1; c <= heads.length; c++) {
+        const cell = ws.getCell(r, c);
+        const followIdx = c - FU;
+        const tint = followIdx > 0 && followIdx % 2 === 0 ? (shade ? 'FFE3E9F4' : 'FFEEF2F8') : base;
+        cell.fill = fill(tint);
+        cell.alignment = { vertical: 'top', wrapText: c > FU || c === 2 || c === 3, horizontal: c === 1 || c === 7 ? 'center' : 'left' };
+        if (!cell.font || cell.font.name !== 'Arial') cell.font = F();
+        if (newDay) cell.border = { top: { style: 'medium', color: { argb: 'FF8A96A3' } } };
+      }
+    });
+    if (!list.length) { ws.getCell('A2').value = emptyMsg; ws.getCell('A2').font = F({ italic: true, color: { argb: GREY } }); }
+    ws.views = [{ state: 'frozen', xSplit: 2, ySplit: 1 }];
+    [10, 24, 26, 18, 22, 22, 8, 18, 18].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+    for (let k = 0; k < maxN; k++) ws.getColumn(FU + 1 + k).width = 38;
+  }
+  writeNotesSheet(wsN, withNotes, 'No leads with notes.');
+
+  // one tab per agent who has notes
+  const usedNames = new Set(['summary', 'leads with notes', 'leads without notes']);
+  const byAgent = new Map();
+  withNotes.forEach((i) => { if (!byAgent.has(i.agent)) byAgent.set(i.agent, []); byAgent.get(i.agent).push(i); });
+  [...byAgent.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0])).forEach(([agent, list]) => {
+    let name = agent.replace(/[\[\]:*?\/\\]/g, ' ').trim().slice(0, 31) || 'Agent';
+    for (let n = 2; usedNames.has(name.toLowerCase()); n++) name = name.slice(0, 28) + ' ' + n;
+    usedNames.add(name.toLowerCase());
+    writeNotesSheet(wb.addWorksheet(name), list, '');
   });
-  if (!withNotes.length) { wsN.getCell('A2').value = 'No leads with notes.'; wsN.getCell('A2').font = F({ italic: true, color: { argb: GREY } }); }
-  wsN.views = [{ state: 'frozen', xSplit: 2, ySplit: 1 }];
-  [10, 24, 18, 22, 22, 8, 18, 18].forEach((w, i) => { wsN.getColumn(i + 1).width = w; });
-  for (let k = 0; k < maxN; k++) wsN.getColumn(9 + k).width = 38;
 
   // ===== Leads without Notes
   const wsW = wb.addWorksheet('Leads without Notes');
-  ['Agent', 'Lead ID', 'Lead Name', 'Created', 'Stage', 'Source'].forEach((h, i) => {
+  ['Agent', 'Lead ID', 'Lead Name', 'Campaign', 'Created', 'Stage', 'Source'].forEach((h, i) => {
     const c = wsW.getCell(1, i + 1);
     c.value = h; c.font = F({ bold: true, color: { argb: 'FFFFFFFF' } }); c.fill = fill(NAVY);
     c.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -147,26 +172,25 @@ async function runNotesReport(notesCsv, leadsXlsx, options = {}) {
     list.sort((a, b) => (a.created ?? 9e15) - (b.created ?? 9e15) || a.id - b.id);
     const start = wr;
     list.forEach((it) => {
-      wsW.getCell(wr, 2).value = it.id; wsW.getCell(wr, 3).value = redact(it.name);
-      if (it.created !== null) { wsW.getCell(wr, 4).value = D.toDate(it.created); wsW.getCell(wr, 4).numFmt = 'dd-mmm-yyyy hh:mm'; }
-      wsW.getCell(wr, 5).value = it.stage; wsW.getCell(wr, 6).value = it.source;
-      for (let c = 1; c <= 6; c++) wsW.getCell(wr, c).font = F();
+      wsW.getCell(wr, 2).value = it.id; wsW.getCell(wr, 3).value = redact(it.name); wsW.getCell(wr, 4).value = it.campaign || '';
+      if (it.created !== null) { wsW.getCell(wr, 5).value = D.toDate(it.created); wsW.getCell(wr, 5).numFmt = 'dd-mm-yyyy hh:mm'; }
+      wsW.getCell(wr, 6).value = it.stage; wsW.getCell(wr, 7).value = it.source;
+      for (let c = 1; c <= 7; c++) wsW.getCell(wr, c).font = F();
       wr++;
     });
     wsW.getCell(start, 1).value = agent;
     wsW.getCell(start, 1).font = F({ bold: true });
     if (wr - 1 > start) wsW.mergeCells(start, 1, wr - 1, 1);
     wsW.getCell(start, 1).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-    for (let c = 1; c <= 6; c++) wsW.getCell(wr - 1, c).border = { bottom: { style: 'thin', color: { argb: 'FF8A96A3' } } };
+    for (let c = 1; c <= 7; c++) wsW.getCell(wr - 1, c).border = { bottom: { style: 'thin', color: { argb: 'FF8A96A3' } } };
   });
   if (!without.length) { wsW.getCell('A2').value = 'Every lead has at least one note.'; wsW.getCell('A2').font = F({ italic: true, color: { argb: GREY } }); }
   wsW.views = [{ state: 'frozen', ySplit: 1 }];
-  [26, 10, 28, 18, 22, 18].forEach((w, i) => { wsW.getColumn(i + 1).width = w; });
+  [26, 10, 28, 26, 18, 22, 18].forEach((w, i) => { wsW.getColumn(i + 1).width = w; });
 
   // ===== Summary (formulas on Leads with Notes; total leads per agent is data)
-  const wsS = wb.addWorksheet('Summary');
   wsS.getCell('A1').value = title; wsS.getCell('A1').font = F({ size: 14, bold: true, color: { argb: NAVY } });
-  wsS.getCell('A2').value = `Notes included up to ${qc.notes_through || 'n/a'} (report created ${D.fmtFull(nowMin)}, Dubai time).`;
+  wsS.getCell('A2').value = `${options.periodLabel ? options.periodLabel + '; ' : ''}notes included up to ${qc.notes_through || 'n/a'} (report created ${D.fmtFull(nowMin)}, Dubai time).`;
   wsS.getCell('A2').font = F({ size: 9, italic: true, color: { argb: GREY } });
   ['Agent', 'Total leads', 'With notes', 'Without notes', '% with notes', 'Total notes'].forEach((h, i) => {
     const c = wsS.getCell(4, i + 1);
@@ -181,10 +205,10 @@ async function runNotesReport(notesCsv, leadsXlsx, options = {}) {
     const r = 5 + i;
     wsS.getCell(r, 1).value = agent;
     wsS.getCell(r, 2).value = total;
-    wsS.getCell(r, 3).value = { formula: `COUNTIF('Leads with Notes'!$D$2:$D$${lastRow},A${r})` };
+    wsS.getCell(r, 3).value = { formula: `COUNTIF('Leads with Notes'!$E$2:$E$${lastRow},A${r})` };
     wsS.getCell(r, 4).value = { formula: `B${r}-C${r}` };
     wsS.getCell(r, 5).value = { formula: `IFERROR(C${r}/B${r},0)` };
-    wsS.getCell(r, 6).value = { formula: `SUMIF('Leads with Notes'!$D$2:$D$${lastRow},A${r},'Leads with Notes'!$F$2:$F$${lastRow})` };
+    wsS.getCell(r, 6).value = { formula: `SUMIF('Leads with Notes'!$E$2:$E$${lastRow},A${r},'Leads with Notes'!$G$2:$G$${lastRow})` };
     wsS.getCell(r, 5).numFmt = '0.0%';
     for (let c = 1; c <= 6; c++) wsS.getCell(r, c).font = F();
   });
@@ -196,7 +220,6 @@ async function runNotesReport(notesCsv, leadsXlsx, options = {}) {
   [28, 12, 12, 14, 12, 12].forEach((w, i) => { wsS.getColumn(i + 1).width = w; });
   wsS.views = [{ state: 'frozen', ySplit: 4 }];
 
-  // tab order like the skill: notes, without notes, summary
   const outDir = path.join(options.outRoot || path.join(ROOT, 'output'), `lead-notes_${D.fmtIso(nowMin)}`);
   fs.mkdirSync(outDir, { recursive: true });
   const file = path.join(outDir, `Lead_Notes_Report_${kind}_${D.fmtIso(nowMin)}.xlsx`);

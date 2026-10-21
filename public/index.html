@@ -42,9 +42,8 @@
 </head>
 <body>
 <main>
-  <nav><a class="on" href="/">Buy Leads Dashboard</a><a href="/notes">Lead Notes Report</a></nav>
   <h1>Buy Leads Dashboard</h1>
-  <p class="sub">Upload the Pixi Buy Leads Excel export. You get the dashboard and the Excel reports.</p>
+  <p class="sub">Upload the Pixi Buy Leads Excel export. You get the dashboard, the Excel reports and the lead notes report (notes are fetched from Pixi for every lead in the file).</p>
 
   <div class="card">
     <div id="drop" tabindex="0"><b>Drop the Excel file here</b><span>or click to choose a .xlsx file</span></div>
@@ -113,8 +112,36 @@ function show(j){
   (q.warnings||[]).forEach(w=>notes.push('<warn>'+w));
   h+='<ul>'+notes.map(n=>n.startsWith('<warn>')?'<li class="warn">'+esc(n.slice(6))+'</li>':'<li>'+esc(n)+'</li>').join('')+'</ul>';
   if(Object.keys(q.unmapped_agents||{}).length) h+='<p class="sub">To fix unmapped agents, add them to <code>teams.json</code> and run again.</p>';
+  h+='<div id="notesbox" class="card" style="margin:12px 0 0"></div>';
   h+='<p class="sub">Files saved in <code>'+esc(j.outDir)+'</code></p>';
   $('result').innerHTML=h; $('result').classList.remove('hidden');
+  trackNotes(j.notes);
+}
+
+function trackNotes(n){
+  const box=$('notesbox');
+  if(!n){ box.remove(); return; }
+  if(n.status==='error'){ box.innerHTML='<b>Lead notes report</b><div class="err">'+esc(n.error)+'</div>'; return; }
+  const render=(x)=>{
+    if(x.status==='done'){
+      const q=x.qc;
+      let t='<b>Lead notes report ready</b><div class="kpis">'+[[q.leads,'Leads'],[q.with_notes,'With notes'],[q.without_notes,'Without notes'],[q.total_notes,'Total notes']]
+        .map(a=>'<div class="kpi"><b>'+esc(a[0])+'</b><span>'+esc(a[1])+'</span></div>').join('')+'</div>';
+      t+='<a class="btn" href="'+esc(x.file.url)+'" download>Download notes report</a>';
+      if((q.warnings||[]).length) t+='<ul>'+q.warnings.map(w=>'<li class="warn">'+esc(w)+'</li>').join('')+'</ul>';
+      box.innerHTML=t; return true;
+    }
+    if(x.status==='error'){ box.innerHTML='<b>Lead notes report</b><div class="err">'+esc(x.error)+'</div>'; return true; }
+    const pct=x.total?Math.round(100*x.done/x.total):0;
+    box.innerHTML='<b>Fetching notes from Pixi...</b><div class="sub">'+x.done+' of '+x.total+' leads ('+pct+'%). Pixi allows about one request every 2 seconds, so large files take several minutes. You can already open the dashboard above.</div>'
+      +'<div style="height:8px;background:var(--bg);border-radius:6px;overflow:hidden"><div style="height:8px;width:'+pct+'%;background:var(--accent)"></div></div>';
+    return false;
+  };
+  const tick=async()=>{
+    try{ const x=await (await fetch('/api/jobs/'+n.jobId)).json(); if(render(x)) return; }catch(e){}
+    setTimeout(tick,3000);
+  };
+  render(n); tick();
 }
 </script>
 </body>

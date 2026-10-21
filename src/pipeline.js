@@ -73,7 +73,7 @@ async function runReport(xlsxPath, options = {}) {
     await build(pool, cfg, `Buy Leads from Lead Pool: ${stamp}`, start, end, exportMin, files.excel_pool);
     log('Lead pool Excel written');
   }
-  return { qc, files, outDir, period: [D.fmtInput(start), D.fmtInput(end)], source: source || 'All sources' };
+  return { qc, files, outDir, leadIds: cleanRows.map((r) => r.id), period: [D.fmtInput(start), D.fmtInput(end)], source: source || 'All sources' };
 }
 
 module.exports = { runReport };

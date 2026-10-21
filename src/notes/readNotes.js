@@ -92,6 +92,7 @@ const ALIASES = {
   stage: ['Stage', 'Type'],
   source: ['Source Of Lead', 'Source', 'Portal'],
   created: ['Create Time', 'Created', 'Lead Time'],
+  campaign: ['Ad campaign Name', 'Campaign'],
 };
 function cellVal(v) {
   if (v === null || v === undefined) return null;
@@ -131,7 +132,7 @@ async function readLeads(filePath) {
     if (!Number.isFinite(id) || id <= 0 || leads.has(id)) continue;
     leads.set(id, {
       id, name: String(g('name') ?? '').replace(/\uFFFD/g, '').trim(), agent: String(g('agent') ?? '').trim() || 'Unassigned',
-      stage: String(g('stage') ?? '').trim(), source: String(g('source') ?? '').trim(), created: toMinutes(g('created')),
+      stage: String(g('stage') ?? '').trim(), source: String(g('source') ?? '').trim(), campaign: String(g('campaign') ?? '').trim(), created: toMinutes(g('created')),
     });
   }
   return { leads, kind };

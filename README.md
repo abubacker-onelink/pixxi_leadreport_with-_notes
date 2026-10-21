@@ -32,6 +32,14 @@ node src/cli.js export.xlsx --start "13-10-2026 00:00" --end "14-10-2026 09:40" 
 ```
 
 ## 2. Lead Notes Report
+**One upload now gives both outputs.** On the main page, upload the Buy Leads export: the dashboard and Excel reports are ready in seconds, and the lead notes report is built in the background (progress bar on the page). Notes are fetched only for the leads kept in the dashboard (period, source and test-lead filters applied). Pixi allows about one request per 2 seconds, so allow roughly 2 seconds per lead (190 leads is about 7 minutes). The notes workbook is saved in the same output folder (Summary, Leads with Notes, one tab per agent, Leads without Notes; Campaign column included).
+
+**How the API token is handled**
+- It is read only from the `PIXXI_TOKEN` environment variable on the machine running the server. It is never typed into, sent to, or returned by the web page, and it is not written to any file, log, or workbook.
+- It is sent only to Pixi, in the `X-PIXXI-TOKEN` header of `POST https://dataapi.pixxicrm.ae/pixxiapi/v1/lead/activity-logs`.
+- If it is missing, the dashboard is still produced and the page says notes were skipped.
+- Do not hard-code it or commit it. Rotate it in Pixi if it was ever pasted into a chat or shared terminal.
+
 Set the Pixi API token in `PIXXI_TOKEN` before starting the app. The **Lead Notes Report** page takes one file: a Pixi leads Excel export (Buy or Portal). For every lead ID in the Excel file, the app fetches Note activity logs from Pixi's `POST /pixxiapi/v1/lead/activity-logs` endpoint and generates a separate report for that export.
 
 For example, in macOS/Linux:

@@ -26,6 +26,7 @@ const r = await runNotesReport('notes.csv', 'leads.xlsx', { title, outRoot, auth
 - `src/notes/readNotes.js` CSV + notes JSON + leads Excel readers (Buy / Portal / prepared leads.xlsx auto-detected).
 - `src/notes/runNotesReport.js` builds the 3-tab workbook. Universe of leads = leads listed in the notes CSV.
 - Rules: Follow-up 1 is the OLDEST note; never show user IDs (map through `authors.json`); Summary uses COUNTIF/SUMIF on "Leads with Notes" and without = total - with (merged cells break COUNTIF); no phone/email in text (`src/util.js` redact).
+- Main page `/` (`POST /api/generate`) now does both: dashboard + Excel, then a background notes job (`GET /api/jobs/:id`) that fetches notes from Pixi for the dashboard's lead IDs (`runReport` returns `leadIds`). Token: `PIXXI_TOKEN` env var only, server side. Pixi rate limit ~1 req/2s is handled in `fetchPixiNotes` (throttle + retry).
 - Server: `/notes` page and `POST /api/notes` (fields: notes, leads, title, authors JSON).
 
 ## Layout (Buy Leads Dashboard)

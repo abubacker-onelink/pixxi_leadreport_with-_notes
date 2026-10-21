@@ -4,6 +4,9 @@ const { parseNotesJson } = require('./readNotes');
 
 const ENDPOINT = 'https://dataapi.pixxicrm.ae/pixxiapi/v1/lead/activity-logs';
 const PAGE_SIZE = 100;
+const MIN_GAP_MS = 2200;   // Pixi answers "Too frequent requests - wait 2 seconds" otherwise
+const MAX_RETRIES = 4;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function fetchPixiNotes(leadIds, options = {}) {
   const token = options.token || process.env.PIXXI_TOKEN;
@@ -14,22 +17,41 @@ async function fetchPixiNotes(leadIds, options = {}) {
   const endpoint = options.endpoint || ENDPOINT;
   const log = options.log || (() => {});
   const leads = new Map();
+  // tests inject fetchImpl and pass minGapMs: 0; real calls are throttled
+  const minGap = options.minGapMs !== undefined ? options.minGapMs : (options.fetchImpl ? 0 : MIN_GAP_MS);
+  let lastCall = 0;
+  const post = async (body) => {
+    for (let attempt = 0; ; attempt++) {
+      const wait = lastCall + minGap - Date.now();
+      if (wait > 0) await sleep(wait);
+      lastCall = Date.now();
+      const response = await fetchImpl(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-PIXXI-TOKEN': token },
+        body: JSON.stringify(body),
+      });
+      let payload;
+      try { payload = await response.json(); } catch { payload = undefined; }
+      const msg = payload && payload.message ? String(payload.message) : '';
+      if (/too frequent|rate limit/i.test(msg) && attempt < MAX_RETRIES) {
+        log(`Pixi rate limit hit, waiting before retry ${attempt + 1}...`);
+        await sleep(2500);
+        continue;
+      }
+      return { response, payload };
+    }
+  };
 
-  for (const leadId of leadIds) {
+  const ids = [...leadIds];
+  let done = 0;
+  for (const leadId of ids) {
     const notes = [];
     let page = 1;
     let totalPages = 1;
     do {
       log(`Fetching notes for lead ${leadId} (page ${page})...`);
-      const response = await fetchImpl(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-PIXXI-TOKEN': token },
-        body: JSON.stringify({ leadId, type: 'Note', page, size: PAGE_SIZE }),
-      });
-      let payload;
-      try {
-        payload = await response.json();
-      } catch {
+      const { response, payload } = await post({ leadId, type: 'Note', page, size: PAGE_SIZE });
+      if (payload === undefined) {
         throw new Error(`Pixi returned an invalid JSON response for lead ${leadId} (HTTP ${response.status}).`);
       }
       if (!response.ok) {
@@ -59,6 +81,7 @@ async function fetchPixiNotes(leadIds, options = {}) {
       page++;
     } while (page <= totalPages);
     leads.set(Number(leadId), { id: Number(leadId), fetchStatus: 'OK', notes });
+    if (options.onProgress) options.onProgress(++done, ids.length);
   }
 
   return { leads, warnings: [], statusCounts: { OK: leads.size } };

@@ -62,7 +62,7 @@ const val = (c) => { const v = c.value; return v && typeof v === 'object' && 're
   ok(q.unknown_author_ids.length === 1 && q.unknown_author_ids[0] === '9999', 'unknown author ID reported');
 
   const wb = new ExcelJS.Workbook(); await wb.xlsx.readFile(res.file);
-  ok(wb.worksheets.map((w) => w.name).join('|') === 'Leads with Notes|Leads without Notes|Summary', 'three sheets in skill order');
+  ok(wb.worksheets.map((w) => w.name).join('|').startsWith('Summary|Leads with Notes|') && wb.worksheets[wb.worksheets.length - 1].name === 'Leads without Notes', 'Summary first, then Leads with Notes');
   const ws = wb.getWorksheet('Leads with Notes');
 
   // independent check: follow-up 1 is the OLDEST note, last follow-up the NEWEST
@@ -71,10 +71,10 @@ const val = (c) => { const v = c.value; return v && typeof v === 'object' && 're
   for (let r = 2; r <= ws.rowCount; r++) {
     const id = ws.getCell(r, 1).value; if (!id) continue;
     const times = raw.get(id).notes.map((n) => n.time).filter((t) => t !== null).sort((a, b) => a - b);
-    const count = ws.getCell(r, 6).value;
+    const count = ws.getCell(r, 7).value;
     if (count !== raw.get(id).notes.length) countOk = false;
-    const first = ws.getCell(r, 9).value.richText[0].text.trim();
-    const lastCell = ws.getCell(r, 8 + count).value.richText[0].text.trim();
+    const first = ws.getCell(r, 10).value.richText[0].text.trim();
+    const lastCell = ws.getCell(r, 9 + count).value.richText[0].text.trim();
     if (first !== D.fmtDow(times[0]) || lastCell !== D.fmtDow(times[times.length - 1])) orderOk = false;
     checked++;
   }
@@ -85,8 +85,8 @@ const val = (c) => { const v = c.value; return v && typeof v === 'object' && 're
   // sort: created day ascending, most notes first inside a day
   let sortOk = true, prev = null;
   for (let r = 2; r <= ws.rowCount; r++) {
-    const c = ws.getCell(r, 3).value; if (!(c instanceof Date)) continue;
-    const day = Math.floor(c.getTime() / 86400000), n = ws.getCell(r, 6).value;
+    const c = ws.getCell(r, 4).value; if (!(c instanceof Date)) continue;
+    const day = Math.floor(c.getTime() / 86400000), n = ws.getCell(r, 7).value;
     if (prev && (day < prev.day || (day === prev.day && n > prev.n))) sortOk = false;
     prev = { day, n };
   }
@@ -106,8 +106,8 @@ const val = (c) => { const v = c.value; return v && typeof v === 'object' && 're
   // "(by Name)" appears only when the author differs from the agent
   let byOk = true, byCount = 0;
   for (let r = 2; r <= ws.rowCount; r++) {
-    const agent = ws.getCell(r, 4).value; if (!agent) continue;
-    for (let c = 9; c <= ws.columnCount; c++) {
+    const agent = ws.getCell(r, 5).value; if (!agent) continue;
+    for (let c = 10; c <= ws.columnCount; c++) {
       const v = ws.getCell(r, c).value; if (!v || !v.richText) continue;
       const m = /\(by ([^)]+)\)$/.exec(v.richText[1].text);
       if (m) { byCount++; if (m[1].toLowerCase() === String(agent).toLowerCase()) byOk = false; }
