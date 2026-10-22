@@ -7,27 +7,28 @@
       "color": "#3B82C4",
       "members": [
         "Georges Bechara",
-        "Omama Hussain",
-        "Muhammad Umar Ali",
-        "Farida Mohammad",
-        "Mazen Abou Karroum",
-        "Mohamed Aly Reyad Sheba",
-        "Gouthaman Asokan",
         "Adel Saad",
         "Ainam Dehgani",
-        "Camila Lopez"
-      ]
+        "Ben James Collins",
+        "Camila Lopez",
+        "Farida Mohammad",
+        "Gouthaman Asokan",
+        "Mohamed Aly Reyad Sheba",
+        "Muhammad Umar Ali",
+        "Omama Hussain",
+        "Rebecca Ziegler",
+        "Scholtz Quintin Marius"
+      ],
+      "dept_id": 1890
     },
     {
-      "name": "Jad's Team",
-      "leader": "Jad Roumanos",
-      "color": "#5FA04B",
+      "name": "Inactive Users",
+      "leader": "-",
+      "color": "#7C8794",
+      "dept_id": 1990,
       "members": [
         "Jad Roumanos",
-        "Mykyta Goliev",
-        "Ahmed Moustafa Aboutaleb",
-        "Scholtz Quintin Marius",
-        "Ben James Collins",
+        "Mazen Abou Karroum",
         "Moath"
       ]
     },
@@ -37,20 +38,24 @@
       "color": "#D9772B",
       "members": [
         "Ragheb Al Husseini",
-        "Ridvan Alsabbagh",
-        "Seyed Mohammad Tabatabaei",
-        "Dania Al Husseini",
+        "Ahmed Moustafa Aboutaleb",
         "Alaa Nadim Alawar",
-        "Anastasia Ogurtsova"
-      ]
+        "Anastasia Ogurtsova",
+        "Dania Al Husseini",
+        "Ridvan Alsabbagh",
+        "Seyed Mohammad Tabatabaei"
+      ],
+      "dept_id": 1958
     },
     {
       "name": "Elite Team",
       "leader": "Michel Saab",
       "color": "#1FA3A8",
       "members": [
-        "Marina Tok-Ogly"
-      ]
+        "Marina Tok-Ogly",
+        "Mykyta Goliev"
+      ],
+      "dept_id": 1974
     }
   ],
   "exclude_agents": [
@@ -97,5 +102,27 @@
   ],
   "test_markers": [
     "test"
-  ]
+  ],
+  "departments": {
+    "_help": "Support departments (Pixxi deptId). Reference only, not used as dashboard teams.",
+    "IT Department (1983)": [
+      "Abubacker Sideek",
+      "Alex",
+      "Edmore Chitambo",
+      "Mohamed Ahmed Gomaa Abdelaal"
+    ],
+    "Operations (1984)": [
+      "Jhanella Watchon",
+      "Mira Bautista",
+      "Moeisha Bautista",
+      "Stephanie Peters"
+    ],
+    "Main Office, CEO / General Manager (1326)": [
+      "Michel Saab",
+      "Stefan"
+    ],
+    "Marketing (1982)": [
+      "Soliman Hossameldin"
+    ]
+  }
 }
